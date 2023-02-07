@@ -1,0 +1,14 @@
+sys
+os
+numpy
+matplotlib
+agilentirformats
+scipy
+sklearn
+skimage
+tkinter
+PIL
+black
+isort
+tox
+-e .
