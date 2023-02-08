@@ -80,8 +80,6 @@ class PyIR_Image:
         if xpixels ==0:
             xpixels = self.xpixels
         
-        if image_data.ndim ==1:
-            image_data = pyir_spectralcollection.reshaper_2D(image_data,[ypixels, xpixels])
         
         fig = plt.figure()
         ax1 = fig.add_subplot(1, 1, 1)  # create an axes object in the figure

@@ -22,17 +22,17 @@ import scipy
 import scipy.sparse
 import scipy.integrate as sci_int
 import sklearn
+import agilentmosaic
+import agilenttile
 from sklearn.cluster import KMeans
 from sklearn import preprocessing
 from sklearn import svm
 from sklearn import ensemble
 from sklearn.model_selection import train_test_split
 
-from pyir_image import *
-from pyir_mask import * 
-from pyir_pca import *
-from agilentmosaic import *
-from agilenttile import *
+import pyir_image 
+import pyir_mask 
+import pyir_pca 
 
 class PyIR_SpectralCollection:
     """This is the main Class for loading and preprocessing the spectral data.
@@ -1490,20 +1490,8 @@ class PyIR_SpectralCollection:
 
     def disp_image(self, image_data, title=False, colour_bar=False, greyscale = False,
                    ypixels=0, xpixels=0, **kwargs):    
-        """Plots and displays the inputted image array using matplotlib's
-        pyplot module. Additional arguments for title and colour bars 
-        included.
-        
-        :param image_data: Image array.
-        :type image_data: numpy.array or array.
-        :param title: Title of the plot, default=False
-        :type title: string.
-        :param colour_bar: Colour bar toggle.
-        :type colour_bar: bool.
-        :param ypixels: number of y pixels in image.
-        :type ypixels: int
-        :param xpixels: number of x pixels in image.
-        :type xpixels: int
+        """ Applies pyir_image's disp_image function - 
+        SEE pyir_image.disp_image()
         
         
         :returns: matplotlib.pyplot plot
@@ -1514,4 +1502,18 @@ class PyIR_SpectralCollection:
         if xpixels ==0:
             xpixels = self.xpixels
             
+        if image_data.ndim ==1:
+            image_data = image_data.reshape((ypixels, xpixels))
+            
         return pyir_image.PyIR_Image.disp_image(**locals())
+    
+    def tissue_excluder(self, tissue_mask, ypixels=None, xpixels=None):
+        """Applies pyir_image's tissue_excluder function - 
+        SEE pyir_image.tissue_excluder()
+        
+        
+        :returns: numpy array of bool.
+        
+        """
+        
+        return pyir_image.PyIR_Image.tissue_excluder(**locals())
