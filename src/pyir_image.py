@@ -367,7 +367,7 @@ class PyIR_Image:
         :returns: numpy.array
         
         """
-        return skimage.transform.tf.resize(annotations, (len(source_image[:,0]), 
+        return skimage.transform.resize(annotations, (len(source_image[:,0]), 
                                        len(source_image[0,:])))
     def resize_image(self, annotations, y_size=0, x_size = 0):
         """Reshapes the initial input array to the dimensions of the 
@@ -392,7 +392,7 @@ class PyIR_Image:
         if x_size == 0:
             x_size = annotations.shape[1]
         
-        return skimage.transform.tf.resize(annotations, (y_size, x_size))
+        return skimage.transform.resize(annotations, (y_size, x_size))
     
     def affine_transform(self, annotations, source_coor, desti_coor):
         """Conducts an affine transform on inputted annotations using provided
@@ -410,13 +410,13 @@ class PyIR_Image:
         
         """
         
-        affine_trans = skimage.transform.tf.estimate_transform('affine', 
+        affine_trans = skimage.transform.estimate_transform('affine', 
                                                     source_coor,desti_coor)
         
-        warped = skimage.transform.tf.warp(annotations, 
+        warped = skimage.transform.warp(annotations, 
                                     inverse_map = affine_trans.inverse,
-                         output_shape=(annotations.shape[0]+50, 
-                                       annotations.shape[1]+50))
+                         output_shape=(annotations.shape[0]+500, 
+                                       annotations.shape[1]+500))
         return warped
     
     def fill_image_click(self, image_mask, value=1, **kwargs):
@@ -627,3 +627,34 @@ class PyIR_Image:
             tissue_frac = np.sum(main_segment)/ np.sum(tissue_mask)
 
         return main_segment.ravel()
+    
+    def cluster_rebuild(self, clusters, mask, ypixels=None, xpixels=None):
+        """Rebuilds a clustering output to an image.
+        
+        :param clusters: Original clusters results.
+        :type clusters: np.array
+        :param mask: Original tissue mask.
+        :type mask: np.array of bools.
+        :param ypixels: ypixels of the image. Default= None
+        :type ypixels: int 
+        :param xpixels: xpixels of the image. Default= None
+        :type xpixels: int 
+        
+        :returns: numpy array of int.
+        
+        """
+        
+        if ypixels == None:
+            ypixels = self.ypixels
+        if xpixels == None:
+            xpixels = self.xpixels
+        
+        rebuild_knn = np.zeros((ypixels*xpixels))
+        count = 0;
+        for i in np.arange(0, rebuild_knn.shape[0]):
+            if mask[i] == True:
+                rebuild_knn[i] = clusters[count]+1
+                count = count+1
+                
+        return rebuild_knn.astype(int)
+        

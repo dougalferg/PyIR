@@ -1517,3 +1517,19 @@ class PyIR_SpectralCollection:
         """
         
         return pyir_image.PyIR_Image.tissue_excluder(**locals())
+    
+    def cluster_rebuild(self, clusters, mask, ypixels=None, xpixels=None):
+        """Applies pyir_image's cluster_rebuild function - 
+        SEE pyir_image.cluster_rebuild()
+        
+        
+        :returns: numpy array of int.
+        
+        """
+        
+        if ypixels == None:
+            ypixels = self.ypixels
+        if xpixels == None:
+            xpixels = self.xpixels
+            
+        return pyir_image.PyIR_Image.cluster_rebuild(**locals())
