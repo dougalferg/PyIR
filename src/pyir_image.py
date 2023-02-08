@@ -9,13 +9,17 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import pyir_pca, pyir_spectralcollection, pyir_mask
 import tkinter
 import skimage
 from tkinter import ttk
 from PIL import Image, ImageTk
 from skimage import measure, segmentation
 from sklearn.metrics.pairwise import euclidean_distances
+
+from pyir_spectralcollection import *
+from pyir_mask import * 
+from pyir_pca import *
+
 
 class PyIR_Image:
     """PyIR_Image is a class to be used mainly for imaging purposes such 

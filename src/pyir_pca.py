@@ -10,7 +10,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sklearn
-import pyir_spectralcollection, pyir_image, pyir_mask
+
 
 class PyIR_PCA:
     """PyIR_PCA is a class to be used mainly for the 
