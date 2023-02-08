@@ -7,6 +7,6 @@ Authors:
 
 :Version: 1.0
 :Copyright: 2023 Dougal Ferguson
-:License: GNU Lesser General Public License v3.0 or later    
+:License: MIT License  
 :Language: Python 3.9 or later    
 
