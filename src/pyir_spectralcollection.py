@@ -17,8 +17,7 @@ sys.path.append(full_path)
 
 import numpy as np
 import matplotlib.pyplot as plt
-import agilentmosaic as agmos
-import agilenttile as agmostile
+
 import scipy
 import scipy.sparse
 import scipy.integrate as sci_int
@@ -29,7 +28,11 @@ from sklearn import svm
 from sklearn import ensemble
 from sklearn.model_selection import train_test_split
 
-import pyir_image, pyir_mask, pyir_pca
+from pyir_image import *
+from pyir_mask import * 
+from pyir_pca import *
+from agilentmosaic import *
+from agilenttile import *
 
 class PyIR_SpectralCollection:
     """This is the main Class for loading and preprocessing the spectral data.
@@ -132,9 +135,9 @@ class PyIR_SpectralCollection:
         self.determine_filetype()
         temp = []
         if self.file_type.lower() == 'mosaic':
-            temp = agmos.AgilentMosaic()
+            temp = agilentmosaic.AgilentMosaic()
         elif self.file_type.lower() == 'tile':
-            temp = agmostile.AgilentTile()   
+            temp = agilenttile.AgilentTile()   
         return temp
             
     def is_readable(self):

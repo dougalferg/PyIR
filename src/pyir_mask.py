@@ -8,7 +8,9 @@
 """
 
 import numpy as np
-import pyir_spectralcollection, pyir_image, pyir_pca
+from pyir_spectralcollection import *
+from pyir_image import * 
+from pyir_pca import *
 
 
 class PyIR_Mask:
