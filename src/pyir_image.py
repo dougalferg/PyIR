@@ -649,11 +649,14 @@ class PyIR_Image:
         if xpixels == None:
             xpixels = self.xpixels
         
+        if np.min(clusters) == 0:
+            clusters = clusters+1
+            
         rebuild_knn = np.zeros((ypixels*xpixels))
         count = 0;
         for i in np.arange(0, rebuild_knn.shape[0]):
             if mask[i] == True:
-                rebuild_knn[i] = clusters[count]+1
+                rebuild_knn[i] = clusters[count]
                 count = count+1
                 
         return rebuild_knn.astype(int)

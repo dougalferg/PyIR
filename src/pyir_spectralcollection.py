@@ -29,6 +29,7 @@ from sklearn import preprocessing
 from sklearn import svm
 from sklearn import ensemble
 from sklearn.model_selection import train_test_split
+import h5py
 
 import pyir_image 
 import pyir_mask 
@@ -159,7 +160,7 @@ class PyIR_SpectralCollection:
     def load_data(self):
         """Loads the data using external agilent_ir_format module.
         Data is loaded in as wavenumbers by x by y numpy arrayformat. It is 
-        then reshaped internally to be of form x by y by wavenumber numpy array.
+        then reshaped internally to be of form x * y by wavenumber numpy array.
         
         :returns: object.items; data, wavenumbers, is_loaded, xpixels, ypixels
         
@@ -177,6 +178,26 @@ class PyIR_SpectralCollection:
         self.xpixels = result['info']['xpixels']
         self.ypixels = result['info']['ypixels']
         _, self.data = self.reshaper_3D(self.data)
+        
+    def load_hdf5(self):
+        """Loads the data using external h5py module for hdf5 file formatted 
+        data. Data is loaded in as form x * y by wavenumber h1.dataset format.
+        Assume read only access to be given.
+        
+        :returns: object.items; data, wavenumbers, is_loaded, xpixels, ypixels, dict of metadata
+        
+        """
+        
+        temp = h5py.File(self.filepath, 'r')
+               
+        self.data = temp['data']['intensities']
+        self.wavenumbers = temp['data']['xvalues']
+        self.xpixels = temp['data']['xpixels']
+        self.ypixels = temp['data']['ypixels']
+        self.tissue_mask = temp['data']['tissue_mask']
+        self.metadata = temp['data'].attrs
+        self.file_type = 'hdf5'
+        self.data_loaded = True
     
     def is_loaded(self):
         """Checks whether the data is loaded.
@@ -840,7 +861,7 @@ class PyIR_SpectralCollection:
             dims, data = self.reshaper_3D(data)
             is_3D = True
         
-        step = np.abs(wavenumbers[0]-wavenumbers[1])
+        step = np.abs(np.ravel(wavenumbers)[0]-np.ravel(wavenumbers)[1])
         areas = data[:,(np.where((wavenumbers < position+step/2)*
                                   (wavenumbers > position-step/2) )[0][0])]
         
@@ -904,12 +925,12 @@ class PyIR_SpectralCollection:
         if type(wavenums) == bool:
             wavenums = self.wavenumbers
         
-        step = np.abs(wavenums[0]-wavenums[1])
-        
-        lower_loc = (np.where((wavenums < lower+step/2)*
-                                  (wavenums > lower-step/2))[0][0])
-        upper_loc = (np.where((wavenums < upper+step/2)*
-                                  (wavenums > upper-step/2))[0][0])
+        step = np.abs(np.ravel(wavenums)[0]-np.ravel(wavenums)[1])
+
+        lower_loc = (np.where((np.ravel(wavenums) < lower+step/2)*
+                                  (np.ravel(wavenums) > lower-step/2))[0][0])
+        upper_loc = (np.where((np.ravel(wavenums) < upper+step/2)*
+                                  (np.ravel(wavenums) > upper-step/2))[0][0])
         
         is_3D = False
         if data.ndim == 3:
