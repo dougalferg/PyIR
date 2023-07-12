@@ -58,7 +58,7 @@ tissue_spec = tile_1.all_spec_min2zero(tissue_spec)
 tissue_spec = tile_1.vector_norm(tissue_spec)
 
 scnd_der_data, scnd_der_wav= tile_1.data_deriv(tissue_spec, tissue_spec_wavenumbers, 
-                                             13, 4, 1)
+                                             13, 4, 2)
 scnd_der_data, scnd_der_wav = tile_1.keep_range(1050,3450, scnd_der_data, scnd_der_wav) 
 scnd_der_data, scnd_der_wav = tile_1.remove_range(2200, 2500, scnd_der_data, scnd_der_wav)
 

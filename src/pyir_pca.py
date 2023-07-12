@@ -10,6 +10,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sklearn
+import pyir_spectralcollection
 
 
 class PyIR_PCA:
@@ -65,7 +66,7 @@ class PyIR_PCA:
         """
         #Checks to see if input is 3D.
         if data.ndim == 3:
-            dims, data = self.reshaper_3D(data)
+            dims, data = pyir_spectralcollection.reshaper_3D(data)
         self.pca_module = sklearn.decomposition.PCA(n_components=n_comp).fit(data)
         self.pca_loadings = self.pca_module.components_
         self.pca_scores = np.dot(data, 
@@ -160,7 +161,7 @@ class PyIR_PCA:
             wavenums = np.arange(0, self.pca_loadings[prin_comp-1,:].shape[0])
         
         plt.figure()
-        plt.plot(wavenums, self.pca_loadings[prin_comp-1,:])
+        plt.plot(np.ravel(wavenums), self.pca_loadings[prin_comp-1,:])
         plt.ylabel('weight')
         plt.xlabel('wavenumber cm-1')
         if temp == 1:
