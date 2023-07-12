@@ -161,7 +161,7 @@ class PyIR_PCA:
             wavenums = np.arange(0, self.pca_loadings[prin_comp-1,:].shape[0])
         
         plt.figure()
-        plt.plot(wavenums, self.pca_loadings[prin_comp-1,:])
+        plt.plot(np.ravel(wavenums), self.pca_loadings[prin_comp-1,:])
         plt.ylabel('weight')
         plt.xlabel('wavenumber cm-1')
         if temp == 1:

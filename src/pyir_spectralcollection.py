@@ -678,21 +678,21 @@ class PyIR_SpectralCollection:
         """  
         upper, lower = self.arg_size_checker(upper, lower)
         
-        lowerlim = np.where(wavenumbers >= lower)[0][0]  
-        upperlim = np.where(wavenumbers >= upper)[0][0]
+        lowerlim = np.where(np.ravel(wavenumbers) >= lower)[0][0]  
+        upperlim = np.where(np.ravel(wavenumbers) >= upper)[0][0]
         #To save on computational time apply the removal depending on what
         #Form the data is in, 3D or 2D
         if data.ndim == 2:              
                 data = np.concatenate((data[:,0:lowerlim], data[:,upperlim:]),
                                       axis=1)
-                wavenumbers = np.concatenate((wavenumbers[0:lowerlim], 
-                                              wavenumbers[upperlim:]))
+                wavenumbers = np.concatenate((np.ravel(wavenumbers)[0:lowerlim], 
+                                              np.ravel(wavenumbers)[upperlim:]))
         elif data.ndim ==3:
                 data = np.concatenate((data[:,:,0:lowerlim], 
                                        data[:,:,upperlim:]),
                                       axis=1)
-                wavenumbers = np.concatenate((wavenumbers[0:lowerlim], 
-                                              wavenumbers[upperlim:]))
+                wavenumbers = np.concatenate((np.ravel(wavenumbers)[0:lowerlim], 
+                                              np.ravel(wavenumbers)[upperlim:]))
         return data, wavenumbers
             
     def remove_co2(self, data, wavenumbers):
