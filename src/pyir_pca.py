@@ -245,7 +245,8 @@ class PyIR_PCA:
     
     def transform_dims(self, data, loadings, n_comp=0):
         """Transforms the dataset to a specified number of components from
-        an external loadings array.
+        an external loadings array. In essence generating score values for
+        each loading.
         
         :param data: Original data to be dimensionally transformed.
         :type data: np.array
@@ -267,3 +268,43 @@ class PyIR_PCA:
         data = np.dot(data, loadings.T)
         
         return data
+    
+    def pca_smoothing(self, data, pca_mean, loadings, n_comp=0):
+        """Performs PCA smoothing to a user defined number of principal 
+        components using an external pca model's loadings. It is important 
+        that the inputted data is not mean centered yet and the user provides 
+        the mean from the trained pca model to subtract such that the 
+        smoothing operation works correctly.
+        
+        :param data: Original data to be smoothed.
+        :type data: np.array
+        :param pca_mean: The subtratced mean from the external pca model.
+        :type pca_mean: np.array 
+        :param loadings: Loadings array.
+        :type loadings: np.array 
+        :param n_comp: User defined number of components to smooth to, default=0.
+        :type n_comp: int
+        
+        
+        :returns: numpy array
+        
+        """  
+                
+        if n_comp ==0: 
+            #If no argument presented, assume maximum number of n_components.
+            #Assuming loading array is (n_comp, wavenumber) dimensions
+            n_comp = min(loadings.shape[0], loadings.shape[1])
+            
+        
+        #Step one is to generate the scores array by first subtracting the 
+        #external pca model's mean from the data, and then multiplying the data
+        #by the external data's loadings. This is done using the .transform_dims
+        #function.
+        
+        scores = self.transform_dims(data-pca_mean, loadings, n_comp)
+        
+        #Step two is to then smooth the data by multiply the scores and loading
+        #arrays to obtain a smoothed dataset of the same dimensions of the 
+        #original data, then add the subtracted mean back
+        
+        return (np.dot(scores[:,0:n_comp], loadings[0:n_comp,:]))+pca_mean
