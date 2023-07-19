@@ -588,7 +588,7 @@ class PyIR_Image:
         
         return pixels_distance, micron_distance_cm
     
-    def tissue_excluder(self, tissue_mask, ypixels=None, xpixels=None):
+    def tissue_excluder(self, tissue_mask, ypixels=None, xpixels=None, perc = 0.95):
         """Segments out all tissue debris or breaks that are not part of the
         main tissue sections. Accounts for multiple large sections by ensuring
         final mask contains >=95% of all tissue spectra.
@@ -608,6 +608,8 @@ class PyIR_Image:
             ypixels = self.ypixels
         if xpixels == None:
             xpixels = self.xpixels
+        if perc <1:
+            perc = perc/100
         
         if tissue_mask.ndim == 1:
             numbered_sections = measure.label(np.reshape(tissue_mask,(ypixels,xpixels)), background=0)
@@ -620,7 +622,7 @@ class PyIR_Image:
         
         tissue_frac = 0
         main_segment = np.zeros((ypixels, xpixels)).astype(bool)
-        while tissue_frac <= 0.95:
+        while tissue_frac <= perc:
             main_segment = main_segment +(numbered_sections == np.where(size_counts ==
                                                           np.max(size_counts))[0][0])
             size_counts[np.where(size_counts ==np.max(size_counts))[0][0]] = 0

@@ -273,8 +273,8 @@ class PyIR_SpectralCollection:
         if type(wavenums) == int:
             wavenums = self.wavenumbers
             
-        lowerlim = np.where(wavenums >= lower)[0][0]
-        upperlim = np.where(wavenums >= upper)[0][0]
+        lowerlim = np.where(np.ravel(wavenums) >= lower)[0][0]
+        upperlim = np.where(np.ravel(wavenums) >= upper)[0][0]
         #upperlim+1 and lowerlim-1 is to ensure that the upper and lower
         #limit column is also included
         
@@ -283,7 +283,7 @@ class PyIR_SpectralCollection:
         elif data.ndim ==2:
            data = data[:,lowerlim-1:upperlim+1]
         
-        wavenums = wavenums[lowerlim-1:upperlim+1]
+        wavenums = np.ravel(wavenums)[lowerlim-1:upperlim+1]
         
         return data, wavenums
 
@@ -603,7 +603,7 @@ class PyIR_SpectralCollection:
         
         return data
     
-    def feature_norm(self, data=0, feature_pos=1650, wavenumbers=0):
+    def feature_norm(self, feature_pos=1650, data=0, wavenumbers=0):
         """ Featur normalises the object's spectral dataset along each 
         wavenumber measurement point based on a specified absorbance point.
         
@@ -761,8 +761,8 @@ class PyIR_SpectralCollection:
         self.class_labels = labels[1]
         
         
-    def K_means_cluster(self, data, clusters=5, init_ ='k-means++', n_initi =15,
-                      max_it=300, tolerance= 0.01, **kwargs):
+    def K_means_cluster(self, data, clusters=5, init_ ='k-means++', n_initi = 20,
+                      max_it=500, tolerance= 0.01, **kwargs):
         #standardise the totalimage for clustering
         #converting the total image to type float is to conserve numerical 
         #accuracy
@@ -1447,9 +1447,13 @@ class PyIR_SpectralCollection:
             test[x] = MAD_TEST(rsd[x:sm])      
             
         results = np.empty((sm, 4))
+        #n  is the principal component 
         results[:,0] = n
+        # ev is the eigenvalue sum (measure of variance)
         results[:,1] = ev
+        # rsd is the residual standard deviation
         results[:,2] = rsd
+        # test is where full rank matrix is reached using the MAD test
         results[:,3] = test
         
         return results
