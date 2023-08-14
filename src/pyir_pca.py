@@ -243,13 +243,18 @@ class PyIR_PCA:
         
         return sklearn.decomposition.KernelPCA(n_components = n_comps, kernel = kernel, **kwargs)   
     
-    def transform_dims(self, data, loadings, n_comp=0):
+    def transform_dims(self, data, pca_mean, loadings, n_comp=0):
         """Transforms the dataset to a specified number of components from
         an external loadings array. In essence generating score values for
-        each loading.
+        each loading. It is important 
+        that the inputted data is not mean centered yet and the user provides 
+        the mean from the trained pca model to subtract such that the 
+        smoothing operation works correctly.
         
         :param data: Original data to be dimensionally transformed.
         :type data: np.array
+        :param pca_mean: The subtratced mean from the external pca model.
+        :type pca_mean: np.array 
         :param loadings: Loadings array from a Doug_PCA object.
         :type loadings: np.array 
         :param n_comp: User defined number of components, default=0.
@@ -265,7 +270,7 @@ class PyIR_PCA:
             loadings = loadings[0:n_comp]
         
         #Project data into now dimensional space
-        data = np.dot(data, loadings.T)
+        data = np.dot(data-pca_mean, loadings.T)
         
         return data
     

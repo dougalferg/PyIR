@@ -606,6 +606,8 @@ class PyIR_SpectralCollection:
     def feature_norm(self, feature_pos=1650, data=0, wavenumbers=0):
         """ Featur normalises the object's spectral dataset along each 
         wavenumber measurement point based on a specified absorbance point.
+        It is possible to also pass a wavenumber/peak region (say amide I peak)
+        so that the sum of the area will be 1 (accounts for possible noisy data).
         
         :param data: dataset to vector normalise. Default = 0
         :type data: array of float64.
@@ -629,7 +631,11 @@ class PyIR_SpectralCollection:
         is_sparseinput = scipy.sparse.issparse(data)
         
         #To find the squares, just use internal .area_at function 
-        squares = self.area_at(feature_pos,data,wavenumbers)
+        if type(feature_pos) == int: 
+            squares = self.area_at(feature_pos,data,wavenumbers)
+        elif len(feature_pos) == 2:
+            squares = self.area_between(feature_pos[0],feature_pos[1],
+                                        data,wavenumbers)
         sum_of_squares = squares
         divisor = sum_of_squares
         divisor[divisor == 0] = 1 #avoid div/0 error

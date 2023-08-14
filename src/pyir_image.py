@@ -661,5 +661,4 @@ class PyIR_Image:
                 rebuild_knn[i] = clusters[count]
                 count = count+1
                 
-        return rebuild_knn.astype(int)
-        
+        return rebuild_knn
