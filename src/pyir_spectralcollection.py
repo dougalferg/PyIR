@@ -191,7 +191,7 @@ class PyIR_SpectralCollection:
         temp = h5py.File(self.filepath, 'r')
                
         self.data = temp['data']['intensities']
-        self.wavenumbers = temp['data']['xvalues']
+        self.wavenumbers = temp['data']['xvalues'][0]
         self.xpixels = temp['data']['xpixels'][0]
         self.ypixels = temp['data']['ypixels'][0]
         self.tissue_mask = temp['data']['tissue_mask']
@@ -1650,3 +1650,74 @@ class PyIR_SpectralCollection:
         Residuals = Spectra - (np.dot(params, Model.T))
         
         return Corrected, Residuals
+    
+    
+    def downsize(self, downsize=2):
+        """ Downsizes an ftir hyperspectral database by a set factor.
+        The downsize argument dictates the new size of the pixels, so down=2
+        will result in each new pixel being 2x2 pixels of the original image.
+        The method works by generating a mesh grid of labels and then rebuilds
+        a new spectral database with the new features. The new pixels will be
+        the average of the group of pixels.
+
+        :param downsize: downsize factor for new pixels (2x2, 3x3 etc)
+        :type downsize: int
+        
+        
+        :returns: PyIR_SpectralCollection object
+        
+        """     
+        
+        rebuild_image  = np.zeros((self.ypixels*self.xpixels, self.wavenumbers.shape[0]))
+        rebuild_image[self.tissue_mask,:] = self.data
+        rebuild_image = np.reshape(rebuild_image, (self.ypixels, self.xpixels, self.wavenumbers.shape[0]))
+        
+        ##############################
+        
+        #original image size
+        original_y = self.ypixels
+        original_x = self.xpixels
+        
+        #two by two, three by three etc 
+
+        ## PAD Y
+        if (original_y/downsize)!=(int(original_y/downsize)):
+            required_padding = int((np.ceil(original_y/downsize)*downsize) - original_y)
+            
+            rebuild_image = np.append(rebuild_image, np.zeros((required_padding, rebuild_image.shape[1],  rebuild_image.shape[2])), axis=0)
+        
+        
+        if (original_x/downsize)!=(int(original_x/downsize)):
+            required_padding = int((np.ceil(original_x/downsize)*downsize) - original_x)
+            
+            rebuild_image = np.append(rebuild_image, np.zeros((rebuild_image.shape[0], required_padding, rebuild_image.shape[2])), axis=1)
+            
+        new_y = int(rebuild_image.shape[0]/downsize)
+        new_x = int(rebuild_image.shape[1]/downsize)
+        
+        grid_mesh = np.zeros((rebuild_image.shape[0],rebuild_image.shape[1]))
+        count = 0
+        for up_to_down in np.arange(0, rebuild_image.shape[0], downsize):
+            for left_to_right in np.arange(0, rebuild_image.shape[1], downsize):
+                grid_mesh[up_to_down:up_to_down+downsize,
+                          left_to_right:left_to_right+downsize] = count
+                count = count + 1
+        
+        grid_mesh = np.reshape(grid_mesh, (rebuild_image.shape[0]*rebuild_image.shape[1]))
+        rebuild_image = np.reshape(rebuild_image, (rebuild_image.shape[0]*rebuild_image.shape[1], rebuild_image.shape[2]))
+        
+        new_image = np.zeros((int(np.max(grid_mesh))+1, self.wavenumbers.shape[0]))
+        for spec in np.arange(0, new_image.shape[0]):
+            new_image[spec,:] = np.mean(rebuild_image[grid_mesh==spec,:], axis=0)
+        
+        
+        new_tiss_mask = (np.max(new_image ,axis =1) > 0)
+        
+        
+        self.data = new_image
+        self.tissue_mask = new_tiss_mask
+        self.ypixels = new_y
+        self.xpixels = new_x
+        
+        print("Dataset downsized from " + str(original_x) + " by " + str(original_y) +
+              " to " + str(new_x) + " by " + str(new_y))
