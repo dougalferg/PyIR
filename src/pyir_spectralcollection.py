@@ -192,8 +192,8 @@ class PyIR_SpectralCollection:
                
         self.data = temp['data']['intensities']
         self.wavenumbers = temp['data']['xvalues']
-        self.xpixels = temp['data']['xpixels']
-        self.ypixels = temp['data']['ypixels']
+        self.xpixels = temp['data']['xpixels'][0]
+        self.ypixels = temp['data']['ypixels'][0]
         self.tissue_mask = temp['data']['tissue_mask']
         self.metadata = temp['data'].attrs
         self.file_type = 'hdf5'
