@@ -1564,3 +1564,89 @@ class PyIR_SpectralCollection:
             xpixels = self.xpixels
             
         return pyir_image.PyIR_Image.cluster_rebuild(**locals())
+    
+    def basic_EMSC_model(self, Ref_spectra, wavenums, **kwargs):
+        """
+        basic_EMSC_model builds the basic EMSC model used for standard EMSC
+        corrections to spectra. It is assumed there is no MIE scattering, however
+        some possible baseline artefacts that require solving. Model has 
+        linear and quadratic term extensions only.
+        
+        Code adapted from Johanne Solheim's Matlab function code
+        found at:https://github.com/BioSpecNorway/ME-EMSC/blob/master/computing/EMSC/make_basicEMSCmodel.m
+        
+        EMSC model is build of a matrix contaning elements of the model as
+        column vectors:
+            0 - consistent baseline
+            1 - linear contribution
+            2 - quadratic contribution
+            4 - reference spectrum
+        
+        :param Ref_spectra: Spectral Dataset to be corrected
+        :type Ref_spectra: numpy.array
+        :param wavenums: Wavenumbers of dataset.
+        :type wavenums: numpy.array
+        
+        
+        :returns: Corrected(np.array), Residuals(np.array)
+        
+        """
+        
+        ## Step 1 - calculate the model functions
+        [_, ystep] = Ref_spectra.shape
+        
+        begin = wavenums[0]
+        end = wavenums[-1]
+        
+        c = 0.5*(begin+end)
+        m_0 = 2/ (begin-end)
+        m = 4 / ((begin-end)*(begin-end))
+        
+        wavenum_transposed = wavenums.T
+        baseline = np.ones((1,ystep))
+        mean = np.mean(Ref_spectra, axis=0)
+        
+        linear = m_0*(begin-wavenum_transposed)-1
+        quadratic = m*((wavenum_transposed-c)*(wavenum_transposed-c))
+        M_Model = np.column_stack((baseline.ravel(), linear, quadratic, mean))
+        
+        return M_Model
+        
+    def basic_EMSC_solve(self, Spectra, Model, **kwargs):
+        """
+        basic_EMSC_solve solves the basic EMSC model used for standard EMSC
+        corrections to spectra. It is assumed there is no MIE scattering, however
+        some possible baseline artefacts that require solving. Model has 
+        linear and quadratic term extensions only.
+        
+        Code adapted from Johanne Solheim's Matlab function code
+        found at:https://github.com/BioSpecNorway/ME-EMSC/blob/master/computing/EMSC/basicEMSCsolver.m
+              
+        
+        
+        EMSC model is build of a matrix contaning elements of the model as
+        column vectors:
+            0 - consistent baseline
+            1 - linear contribution
+            2 - quadratic contribution
+            4 - reference spectrum
+        
+        :param Spectra: Spectral Dataset to be corrected
+        :type Spectra: numpy.array
+        :param Model: Model calculated using basic_EMSC_model() function.
+        :type Model: numpy.array
+        
+        
+        :returns: Corrected(np.array), Residuals(np.array)
+        
+        """
+        ##solve for unknown parameters using OLS
+        params, resid, rank, s = np.linalg.lstsq(Model, 
+                         Spectra.T, rcond=None)
+
+        params = params.T
+
+        Corrected = np.divide((Spectra - np.dot(params[:,0:3], Model[:,0:3].T)),params[:,3].reshape(-1,1))
+        Residuals = Spectra - (np.dot(params, Model.T))
+        
+        return Corrected, Residuals
