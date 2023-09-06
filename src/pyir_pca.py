@@ -306,7 +306,7 @@ class PyIR_PCA:
         #by the external data's loadings. This is done using the .transform_dims
         #function.
         
-        scores = self.transform_dims(data-pca_mean, loadings, n_comp)
+        scores = self.transform_dims(data, pca_mean, loadings, n_comp)
         
         #Step two is to then smooth the data by multiply the scores and loading
         #arrays to obtain a smoothed dataset of the same dimensions of the 
