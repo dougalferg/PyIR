@@ -154,7 +154,9 @@ class PyIR_PCA:
         :returns: matplotlib.pyplot plot
         
         """
-        
+        if prin_comp == 0:
+            print("Components start at 1, Component 0 is the end array pos [-1]")
+            return 0
         temp=0
         if type(wavenums) == int:
             temp = 1
@@ -181,7 +183,8 @@ class PyIR_PCA:
         
         """
         plt.figure()
-        plt.plot(np.cumsum(self.pca_module.explained_variance_ratio_[0:
+        plt.plot(np.arange(1,max_prin_comps+1), 
+                 np.cumsum(self.pca_module.explained_variance_ratio_[0:
                                                             max_prin_comps]))
         plt.xlabel('number of components')
         plt.ylabel('cumulative explained variance')
