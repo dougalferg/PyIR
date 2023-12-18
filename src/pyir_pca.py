@@ -16,7 +16,7 @@ import pyir_spectralcollection
 class PyIR_PCA:
     """PyIR_PCA is a class to be used mainly for the 
     usage of PCA tools on the spectral data. This class
-    uses super() inheritance to take all functions from Doug_Toolbox().
+    uses super() inheritance to take all functions from PY_IR modules.
     Most functions are wrappers of the sklearn.decomposition module 
     paired with other toolbox functions.
 
