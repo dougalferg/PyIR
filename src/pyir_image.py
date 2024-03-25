@@ -446,7 +446,8 @@ class PyIR_Image:
 
         return image_mask.astype(bool)
     
-    def vein_finder(self, image_mask, value=1, threshold=10, expand=0, **kwargs):
+    def vein_finder(self, image_mask, value=1, threshold=10, expand=0, 
+                    ypixels = None, xpixels = None, **kwargs):
         """Finds clusters within a boolean image to locate assumed vein 
         positions to be used for distancing metric work.
         
@@ -465,8 +466,9 @@ class PyIR_Image:
         """  
         original_mask = (image_mask > 0)
         
-        if image_mask.ndim ==1:
-            image_mask = np.reshape(image_mask, (self.ypixels, self.xpixels))
+        if image_mask.ndim ==1 and ypixels!=None and xpixels!=None:
+            image_mask = np.reshape(image_mask, (ypixels, xpixels))
+            
          
         if type(image_mask[0][0]) == np.bool_:
            is_bool = True
@@ -478,21 +480,21 @@ class PyIR_Image:
         image_mask =  measure.label(image_mask, background=0)
         
         #reshape and exclude segments under threshold
-        image_mask =  np.reshape(image_mask,(self.ypixels*self.xpixels))
+        image_mask =  np.reshape(image_mask,(ypixels*xpixels))
         for i in np.arange(1, np.max(image_mask)):
             if np.sum(image_mask==i) < threshold:
                 image_mask[image_mask==i] = 0
                 
-        image_mask = measure.label(np.reshape(image_mask,(self.ypixels, 
-                                                          self.xpixels)), 
+        image_mask = measure.label(np.reshape(image_mask,(ypixels, 
+                                                          xpixels)), 
                            background=0)
         
         if original_mask.ndim ==1:
-            image_mask = (np.reshape(image_mask,(self.ypixels*self.xpixels))
+            image_mask = (np.reshape(image_mask,(ypixels*xpixels))
                             * original_mask)
         elif original_mask.ndim == 2:
-            image_mask = (np.reshape(image_mask,(self.ypixels*self.xpixels))
-                        *np.reshape(original_mask,(self.ypixels*self.xpixels)))
+            image_mask = (np.reshape(image_mask,(ypixels*xpixels))
+                        *np.reshape(original_mask,(ypixels*xpixels)))
         
         return image_mask
     

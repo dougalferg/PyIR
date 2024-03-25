@@ -69,8 +69,16 @@ class PyIR_PCA:
             dims, data = pyir_spectralcollection.reshaper_3D(data)
         self.pca_module = sklearn.decomposition.PCA(n_components=n_comp).fit(data)
         self.pca_loadings = self.pca_module.components_
-        self.pca_scores = np.dot(data, 
+        self.pca_scores = np.dot(data-np.mean(data, axis=0), 
                                  self.pca_module.components_[0:n_comp,:].T)
+        
+    def fit_pca(self, data, n_comp = 50):
+        """Runs fit_PCA function, function is here solely for case sensitive
+        input.
+        
+        """
+        self.fit_PCA(data, n_comp)
+        
         
     def plot_pca_image(self, prin_comp = 1, norm = True):
         """Plots an image of specific principal component scores.
@@ -112,6 +120,10 @@ class PyIR_PCA:
         norm = plt.Normalize(vmin= self.class_labels.min(), 
                              vmax = self.class_labels.max())
         self.class_labels = (self.class_labels.astype('float64')).ravel()
+        
+        #mean center the data before plotting scores
+        data_mean = np.mean(data, axis=0)
+        data = data-data_mean
         
         x_all = np.dot(data, self.pca_module.components_[prin_comp1-1,:])
         y_all = np.dot(data, self.pca_module.components_[prin_comp2-1,:])
