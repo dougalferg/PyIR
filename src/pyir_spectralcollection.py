@@ -1197,64 +1197,6 @@ class PyIR_SpectralCollection:
         
         return lam, p
     
-    def ME_EMSC_Correction_Solver(self, Raw_Spectra, Reference, Contaminant, lamb=1000, p_=0.01):
-        """
-        ME_EMSC_Correction_Solver is built to implement corrections to solve for 
-        contaminants in spectra, in example the removal of paraffin wax from 
-        a spectral dataset.
-        Base solver code adapted from Johanne Solheim's Matlab function code
-        found at: https://github.com/BioSpecNorway/ME-EMSC/blob/master/computing/EMSC/ME_EMSCsolver.m
-        
-        Implement corrections to solve for contaminants in spectra, 
-        in example the removal of paraffin wax from a spectral dataset.
-        
-        Baseline P is calculated using Assymetric Least Squares Regression.
-        
-        EMSC model is build of a matrix contaning elements of the model as
-        column vectors:
-            0 - consistent baseline
-            1 - reference spectrum (pure biological reference)
-            2:end - PCA loadings from PCA model built on Contaminants.
-        
-        :param Raw_Spectra: Spectral Dataset to be corrected
-        :type Raw_Spectra: numpy.array
-        :param Reference: Reference Spectrum for fitting, must be independent and without contaminant
-        :type Reference: numpy.array
-        :param Contaminant: Contaminant Spectral dataset, more samples the better.
-        :type Contaminant: numpy.array
-        :param lam: Smoothness parameter for the baseline fit. Default = 1000.
-        :type lam: int
-        :param p: Asymmetry parameter. Default = 0.01
-        :type p: double
-        
-        
-        :returns: Corrected(np.array), Residuals(np.array)
-        
-        """
-        
-        ## Step 1 - build paraffin model based on pca ~ 98% cum explained var
-        temp_pca = pyir_pca.PyIR_PCA()
-        temp_pca.fit_PCA(Contaminant, n_comp=50)
-        # n_comps selected for that which obtains 97.5% cum explained var
-        n_comp = np.where(np.cumsum(temp_pca.pca_module.explained_variance_ratio_)
-                          > 0.975)[0][0]
-        model = temp_pca.pca_loadings[0:n_comp]
-        
-        ## Step 2 - calculate baseline using ALS subtraction
-        _, P = self.baseline_correct(Data=Raw_Spectra, lam=lamb, p=p_, mean=True)
-        
-        ## Step 3 - build EMSC MODEL  as outlined in docs 
-        EMSCModel = np.column_stack((P, Reference, np.moveaxis(model,0,-1)))
-        
-        ## Step4 - solve for unknown parameters using OLS
-        params, resid, rank, s = np.linalg.lstsq(EMSCModel, 
-                                np.moveaxis(Raw_Spectra,0,-1), rcond=None)
-
-        Corrected = (Raw_Spectra - np.moveaxis(np.dot(EMSCModel,params),0,-1)+ 
-        np.reshape(params[1,:],(params.shape[1],1)) * np.reshape(EMSCModel[:,1], 
-                                                    (1,EMSCModel.shape[0])))
-
-        return Corrected, Raw_Spectra-Corrected  
     
     def resid_sum_sq(self, data, prin_comps=50):
         """Residual sum of squares statistic calculation tool taken from 
@@ -1721,3 +1663,47 @@ class PyIR_SpectralCollection:
         
         print("Dataset downsized from " + str(original_x) + " by " + str(original_y) +
               " to " + str(new_x) + " by " + str(new_y))
+        
+    def iterative_polynomial_baseline_multi(signals, degree=4, iterations=20, threshold=0.1):
+            
+        """
+        Iteratively performs polynomial fitting to detect the baseline of multiple signals.
+        
+        Parameters:
+        signals (array-like): A 2D array where each row is a signal from which to detect the baseline.
+        degree (int): The degree of the polynomial to fit. Default is 3.
+        iterations (int): The number of iterations to perform. Default is 10.
+        threshold (float): The threshold for excluding points above the baseline in standard deviations. Default is 3.
+        
+        Returns:
+        baselines (array): A 2D array where each row is the detected baseline of the corresponding signal.
+        """
+        num_signals = signals.shape[0]
+        signal_length = signals.shape[1]
+        baselines = np.zeros_like(signals)
+        
+        x = np.arange(signal_length)
+        
+        for i in range(num_signals):
+            signal = signals[i]
+            for _ in range(iterations):
+                # Fit a polynomial to the signal
+                p = np.polynomial.polynomial.fit(x, signal, degree)
+                baseline = p(x)
+                
+                # Calculate the residuals (signal - baseline)
+                residuals = signal - baseline
+                
+                # Calculate the standard deviation of the residuals
+                std_dev = np.std(residuals)
+                
+                # Identify points significantly above the baseline
+                mask = residuals < threshold * std_dev
+                
+                # Use only points below the threshold for the next iteration
+                signal = np.where(mask, signal, baseline)
+            
+            # Store the detected baseline for the current signal
+            baselines[i] = baseline
+        
+        return baselines
