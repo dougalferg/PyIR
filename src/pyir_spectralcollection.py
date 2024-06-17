@@ -1664,7 +1664,7 @@ class PyIR_SpectralCollection:
         print("Dataset downsized from " + str(original_x) + " by " + str(original_y) +
               " to " + str(new_x) + " by " + str(new_y))
         
-    def iterative_polynomial_baseline_multi(signals, degree=4, iterations=20, threshold=0.1):
+    def iterative_poly_baseline_fit(self, signals, degree=3, iterations=10, threshold=0.1):
             
         """
         Iteratively performs polynomial fitting to detect the baseline of multiple signals.
@@ -1688,7 +1688,7 @@ class PyIR_SpectralCollection:
             signal = signals[i]
             for _ in range(iterations):
                 # Fit a polynomial to the signal
-                p = np.polynomial.polynomial.fit(x, signal, degree)
+                p = np.polynomial.polynomial.Polynomial.fit(x, signal, degree)
                 baseline = p(x)
                 
                 # Calculate the residuals (signal - baseline)
