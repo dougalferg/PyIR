@@ -1707,33 +1707,24 @@ class PyIR_SpectralCollection:
         
         return baselines
     
-    def interpolate_signals(self, ref_signal, ref_wavenumbers, raw_signals, raw_wavenumbers):
+    def interpolate_signals(self, ref_wavenumbers, raw_signals, raw_wavenumbers):
         """
         Interpolate raw signal and wavenumber arrays to match the reference signal and wavenumber arrays.
         
         Parameters:
         ref_wavenumbers (array-like): The reference wavenumber array.
-        ref_signal (array-like): The reference signal array.
         raw_wavenumbers (array-like): The raw wavenumber array.
         raw_signals (2D array-like): The raw signal array, where each row is a separate raw signal.
         
         Returns:
         interpolated_wavenumbers (numpy.ndarray): The interpolated wavenumber array (same as reference wavenumbers).
         interpolated_raw_signals (numpy.ndarray): The raw signals interpolated to the reference wavenumber points.
-        interpolated_ref_signal (numpy.ndarray): The reference signal interpolated to the reference wavenumber points (for consistency).
         """
         
         # Ensure inputs are numpy arrays
         ref_wavenumbers = np.asarray(ref_wavenumbers)
-        ref_signal = np.asarray(ref_signal)
         raw_wavenumbers = np.asarray(raw_wavenumbers)
         raw_signals = np.asarray(raw_signals)
-        
-        # Interpolation functions
-        ref_signal_interp_func = Akima1DInterpolator(ref_wavenumbers, ref_signal)
-        
-        # Interpolate reference signal to ensure consistency
-        interpolated_ref_signal = ref_signal_interp_func(ref_wavenumbers)
         
         # Interpolate each raw signal to the reference wavenumber points
         interpolated_raw_signals = np.array([
@@ -1744,4 +1735,9 @@ class PyIR_SpectralCollection:
         # The interpolated wavenumber array is the same as the reference wavenumber array
         interpolated_wavenumbers = ref_wavenumbers
         
-        return interpolated_raw_signals, interpolated_wavenumbers, interpolated_ref_signal
+        #check interpolated wavenumbers and ref wavenumbers match
+        if (ref_wavenumbers==interpolated_wavenumbers).all()!=True:
+            print("interpolated array does not match reference array, retry!!")
+            return
+        
+        return interpolated_raw_signals, interpolated_wavenumbers
