@@ -328,3 +328,56 @@ class PyIR_PCA:
         #original data, then add the subtracted mean back
         
         return (np.dot(scores[:,0:n_comp], loadings[0:n_comp,:]))+pca_mean
+    
+    def apply_zero_weighting(self, data, wavenumbers, *zero_weight_ranges):
+        """
+        Apply zero weighting to signal values within specified wavenumber ranges.
+    
+        Parameters:
+        data (2D array-like): The input signal array, where each row is a separate signal.
+        wavenumbers (array-like): The wavenumber array.
+        zero_weight_ranges (tuple or tuples): Tuples of the form (start, end) specifying wavenumber ranges to zero out.
+    
+        Returns:
+        weighted_data (numpy.ndarray): The signal array with zero weights applied.
+        """
+        data = np.asarray(data)
+        wavenumbers = np.asarray(wavenumbers)
+        
+        weighted_data = data.copy()
+        
+        # If zero_weight_ranges contains only one tuple, convert it to a list of one tuple
+        if len(zero_weight_ranges) == 1 and isinstance(zero_weight_ranges[0], tuple):
+            zero_weight_ranges = [zero_weight_ranges[0]]
+        
+        for tuples in zero_weight_ranges:
+            start, end = tuples[0], tuples[1]
+            if start > end:
+                start, end = end, start  # Swap to ensure ascending order
+            mask = (wavenumbers >= start) & (wavenumbers <= end)
+            weighted_data[:, mask] = 0
+        
+        return weighted_data
+
+    def build_zero_weighted_pca_model(self, data, wavenumbers, num_pc=50, *zero_weight_ranges):
+        """
+        Build a PCA model of an inputted signal array and wavenumber array, applying zero weighting
+        to specified wavenumber ranges before building the PCA model.
+    
+        Parameters:
+        data (2D array-like): The input signal array, where each row is a separate signal.
+        wavenumbers (array-like): The wavenumber array.
+        num_pc (int): The number of principal components to retain in the PCA model. Default = 50
+        zero_weight_ranges (tuple or tuples): Tuples of the form (start, end) specifying wavenumber ranges to zero out.
+    
+        Returns:
+        pca_model (sklearn.decomposition.PCA): The PCA model fitted to the weighted signal array.
+        """
+        # Apply zero weighting to the signal array
+        weighted_data = self.apply_zero_weighting(data, wavenumbers, *zero_weight_ranges)
+        
+        # Perform PCA
+        pca_model = sklearn.decomposition.PCA(n_components=num_pc)
+        pca_model.fit(weighted_data)
+        
+        return pca_model, pca_model.components_
