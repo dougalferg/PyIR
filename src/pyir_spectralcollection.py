@@ -1741,3 +1741,61 @@ class PyIR_SpectralCollection:
             return
         
         return interpolated_raw_signals, interpolated_wavenumbers
+
+    
+    def clickon(self, image_2d, signal_3d, wavenumber, ypixel=None, xpixel=None):
+        """
+        Display an interactive plot where clicking on the image shows a line plot
+        of the 3D signal array along the third axis at the clicked position.
+        
+        Parameters:
+        - image_2d: 2D numpy array to be displayed as an image. Can be 1D if dimensions are provided.
+        - signal_3d: 3D numpy array, where the third dimension is the signal to be plotted. Can be 2D if dimensions are provided.
+        - wavenumber: 1D numpy array representing the wavenumber values for the x-axis.
+        - ypixel: Optional. Number of rows in the reshaped 2D array.
+        - xpixel: Optional. Number of columns in the reshaped 2D array.
+        """
+        
+        # Check if image_2d needs reshaping
+        if image_2d.ndim == 1 and ypixel is not None and xpixel is not None:
+            image_2d = image_2d.reshape(ypixel, xpixel)
+        
+        # Check if signal_3d needs reshaping
+        if signal_3d.ndim == 2 and ypixel is not None and xpixel is not None:
+            signal_3d = signal_3d.reshape(ypixel, xpixel, -1)
+        
+        # Check that the reshaped or original arrays have appropriate dimensions
+        if image_2d.shape != signal_3d.shape[:2]:
+            raise ValueError("The shape of image_2d should match the first two dimensions of signal_3d.")
+        
+        if wavenumber.ndim != 1 or wavenumber.shape[0] != signal_3d.shape[2]:
+            raise ValueError("Wavenumber array must be 1D and match the third dimension of signal_3d.")
+        
+        # Create a figure with two subplots
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+        
+        # Plot the 2D image
+        ax1.imshow(image_2d, cmap='gray')
+        
+        # Plot an initial line plot (empty)
+        line, = ax2.plot([], [])
+        ax2.set_xlabel('Wavenumber (cm⁻¹)')
+        ax2.set_ylabel('Absorbance (arb.)')
+        
+        # Define the click event function
+        def onclick(event):
+            # Get the x, y coordinates of the click
+            x, y = int(event.xdata), int(event.ydata)
+            
+            if x >= 0 and y >= 0 and x < image_2d.shape[1] and y < image_2d.shape[0]:
+                # Update the line plot with the signal at the clicked location
+                signal = signal_3d[y, x, :]
+                line.set_data(wavenumber, signal)
+                ax2.relim()
+                ax2.autoscale_view()
+                fig.canvas.draw()
+        
+        # Connect the click event to the onclick function
+        fig.canvas.mpl_connect('button_press_event', onclick)
+        
+        plt.show()

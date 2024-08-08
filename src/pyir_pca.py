@@ -368,7 +368,7 @@ class PyIR_PCA:
         data (2D array-like): The input signal array, where each row is a separate signal.
         wavenumbers (array-like): The wavenumber array.
         num_pc (int): The number of principal components to retain in the PCA model. Default = 50
-        zero_weight_ranges (tuple or tuples): Tuples of the form (start, end) specifying wavenumber ranges to zero out.
+        zero_weight_ranges (tuple or tuples): Tuples of the form (start, end) specifying wavenumber ranges that will not impact the pca.
     
         Returns:
         pca_model (sklearn.decomposition.PCA): The PCA model fitted to the weighted signal array.
