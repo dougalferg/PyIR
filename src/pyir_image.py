@@ -664,3 +664,109 @@ class PyIR_Image:
                 count = count+1
                 
         return rebuild_knn
+    
+    
+    def identify_cores_and_plot(self, mask_image, min_size, margin=20, expansion=0):
+        # Step 1: Ensure the image is binary
+        if mask_image.dtype == bool:
+            binary_mask = mask_image.astype(np.uint8) * 255
+        else:
+            _, binary_mask = cv2.threshold(mask_image, 127, 255, cv2.THRESH_BINARY)
+        
+        expanded_masks = expand_labels(binary_mask, distance = expansion)
+        
+        # Step 2: Identify individual cores using connected components
+        num_labels, labels_im = cv2.connectedComponents(expanded_masks)
+        
+        # Step 3: Initialize plot
+        fig, ax = plt.subplots()
+        ax.imshow(mask_image, cmap='gray')
+        
+        
+        output_coords = []
+    
+        # Step 4: Iterate through each label (excluding background)
+        for i in range(1, num_labels):
+            # Create a mask for each core
+            core_mask = np.where(labels_im == i, 255, 0).astype(np.uint8)
+            
+            # Find contours to get the bounding box
+            contours, _ = cv2.findContours(core_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if contours:
+                # Calculate the area of the core
+                core_area = cv2.contourArea(contours[0])
+                
+                if core_area >= min_size:
+                    # Get the bounding box of the contour
+                    x, y, w, h = cv2.boundingRect(contours[0])
+                    
+                    # Expand the bounding box by a margin of 20 pixels
+                    x_margin = max(x - margin, 0)
+                    y_margin = max(y - margin, 0)
+                    w_margin = min(w + 2 * margin, mask_image.shape[1] - x_margin)
+                    h_margin = min(h + 2 * margin, mask_image.shape[0] - y_margin)
+                    
+                    # Draw the rectangle and label it
+                    rect = plt.Rectangle((x_margin, y_margin), w_margin, h_margin, edgecolor='r', facecolor='none')
+                    ax.add_patch(rect)
+                    ax.text(x_margin, y_margin - 10, f'Grid {i}', color='red', fontsize=8)
+                    
+                    # Save the coordinates in the output array
+                    output_coords.append([x_margin, y_margin, x_margin + w_margin, y_margin + h_margin])
+        
+        # Show the plot
+        plt.title('Identified Cores with Margins')
+        plt.axis('off')
+        plt.show()
+        
+        return output_coords
+
+    
+    def core_mask_cleaner(self, binary_array, min_blob_size=500):
+        """
+        Cleans up the tissue mask of a core TMA treating each core as a blob.
+        Identifies "blobs" in a binary array and plots blobs larger than the minimum size.
+        Result image should be a cleaner binary mask.
+    
+        Parameters:
+        - binary_array: A 2D numpy array with boolean values where True represents the blob.
+        - min_blob_size: Minimum size of blobs to be considered for plotting.
+        - output_image_path: Path to save the output binary image.
+    
+        Returns:
+        - None
+        """
+        # Label connected components
+        labeled_array, num_features = label(binary_array)
+    
+        # Find slices corresponding to each blob
+        slices = find_objects(labeled_array)
+    
+        # Create an output array for visualization
+        output_array = np.zeros_like(binary_array)
+    
+        for i, s in enumerate(slices):
+            # Extract the blob
+            blob = (labeled_array[s] == (i + 1))
+            blob_size = np.sum(blob)
+            
+            # Check if the blob is larger than the minimum size
+            if blob_size >= min_blob_size:
+                output_array[s] = blob
+    
+        # Plot the original binary image and the filtered blobs
+        fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+        
+        # Plot original binary image
+        ax[0].imshow(binary_array, cmap='gray')
+        ax[0].set_title('Original Binary Image')
+        ax[0].axis('off')
+        
+        # Plot filtered blobs
+        ax[1].imshow(output_array, cmap='gray')
+        ax[1].set_title(f'Blobs Larger than {min_blob_size} Pixels')
+        ax[1].axis('off')
+        
+        plt.show()
+    
+        return output_array
