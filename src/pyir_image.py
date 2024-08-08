@@ -686,6 +686,7 @@ class PyIR_Image:
         output_coords = []
     
         # Step 4: Iterate through each label (excluding background)
+        grid_counter = 0
         for i in range(1, num_labels):
             # Create a mask for each core
             core_mask = np.where(labels_im == i, 255, 0).astype(np.uint8)
@@ -709,11 +710,12 @@ class PyIR_Image:
                     # Draw the rectangle and label it
                     rect = plt.Rectangle((x_margin, y_margin), w_margin, h_margin, edgecolor='r', facecolor='none')
                     ax.add_patch(rect)
-                    ax.text(x_margin, y_margin - 10, f'Grid {i}', color='red', fontsize=8)
+                    ax.text(x_margin, y_margin - 10, f'Grid {grid_counter}', color='red', fontsize=8)
+                    
+                    grid_counter = grid_counter+1
                     
                     # Save the coordinates in the output array
                     output_coords.append([x_margin, y_margin, x_margin + w_margin, y_margin + h_margin])
-        
         # Show the plot
         plt.title('Identified Cores with Margins')
         plt.axis('off')
