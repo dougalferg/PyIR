@@ -15,6 +15,8 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 from skimage import measure, segmentation
 from sklearn.metrics.pairwise import euclidean_distances
+from scipy.ndimage import label, find_objects
+import cv2
 
 from pyir_spectralcollection import *
 from pyir_mask import * 
@@ -673,7 +675,7 @@ class PyIR_Image:
         else:
             _, binary_mask = cv2.threshold(mask_image, 127, 255, cv2.THRESH_BINARY)
         
-        expanded_masks = expand_labels(binary_mask, distance = expansion)
+        expanded_masks = segmentation.expand_labels(binary_mask, distance = expansion)
         
         # Step 2: Identify individual cores using connected components
         num_labels, labels_im = cv2.connectedComponents(expanded_masks)
@@ -717,11 +719,10 @@ class PyIR_Image:
                     # Save the coordinates in the output array
                     output_coords.append([x_margin, y_margin, x_margin + w_margin, y_margin + h_margin])
         # Show the plot
-        plt.title('Identified Cores with Margins')
         plt.axis('off')
         plt.show()
         
-        return output_coords
+        return output_coords, fig
 
     
     def core_mask_cleaner(self, binary_array, min_blob_size=500):
