@@ -1799,14 +1799,21 @@ class PyIR_SpectralCollection:
         fig.canvas.mpl_connect('button_press_event', onclick)
         
         plt.show()
-        
+
     def gmm_clustering(self, tissue_data, tissue_mask, clusters=5, cmap='colorful', cov_type='full', init_params='k-means++'
                        , max_iter=1000):
         """
         GMM Clustering: support maximum 11 clusters by default. You can pass different colormaps by changing cmap (N*3 np.array
         , where N equals to number of clusters)
 
+         Parameters:
+        - tissue_data: 2D numpy array.
+        - tissue_mask: Boolean numpy array. Where 'True' indicates a tissue spectrum.
+        - cmap: N by 3 numpy array. Where N is the number of clusters.
+        - cov_type: Type of covariance matrix used in sklearn GMM. 'full' by default. For details please visit sklearn GMM webpage
+        - init_params: Parameters for cluster initialisation. 'k-means++' by default. For details please visit sklearn GMM webpage
         """
+
         if clusters > 11:
             raise ValueError("The maximum number of clusters is 11. Define your own np.array with N (N>11) entries and pass it to 'cmap'")
         gmm = GaussianMixture(n_components=clusters, covariance_type=cov_type, init_params=init_params, max_iter=max_iter)
