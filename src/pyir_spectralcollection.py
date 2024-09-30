@@ -1799,3 +1799,93 @@ class PyIR_SpectralCollection:
         fig.canvas.mpl_connect('button_press_event', onclick)
         
         plt.show()
+
+    def gmm_clustering(self, tissue_data, tissue_mask, clusters=5, cmap='colorful', cov_type='full', init_params='k-means++'
+                       , max_iter=1000):
+        """
+        GMM Clustering: support maximum 11 clusters by default. You can pass different colormaps by changing cmap (N*3 np.array
+        , where N equals to number of clusters)
+
+         Parameters:
+        - tissue_data: 2D numpy array.
+        - tissue_mask: Boolean numpy array. Where 'True' indicates a tissue spectrum.
+        - cmap: N by 3 numpy array. Where N is the number of clusters.
+        - cov_type: Type of covariance matrix used in sklearn GMM. 'full' by default. For details please visit sklearn GMM webpage
+        - init_params: Parameters for cluster initialisation. 'k-means++' by default. For details please visit sklearn GMM webpage
+        """
+
+        if clusters > 11:
+            raise ValueError("The maximum number of clusters is 11. Define your own np.array with N (N>11) entries and pass it to 'cmap'")
+        gmm = GaussianMixture(n_components=clusters, covariance_type=cov_type, init_params=init_params, max_iter=max_iter)
+        empty_img = np.zeros((self.data.shape[0], 3))
+        gmm.fit(tissue_data)
+
+        probs = gmm.predict_proba(tissue_data)
+
+        if cmap =='grey':
+            rgb_colors = np.array([
+                [1, 1, 1],
+                [0.1, 0.1, 0.1],
+                [0.2, 0.2, 0.2],
+                [0.3, 0.3, 0.3],
+                [0.4, 0.4, 0.4],
+                [0.5, 0.5, 0.5],
+                [0.6, 0.6, 0.6],
+                [0.7, 0.7, 0.7],
+                [0.8, 0.8, 0.8],
+                [0.9, 0.9, 0.9],
+                [0.95, 0.95, 0.95]
+            ])
+            selected = np.random.choice(rgb_colors.shape[0], clusters, replace=False)
+            rgb_colors = rgb_colors[selected]
+            stored_colors = []
+        elif cmap == 'colorful':
+            rgb_colors = np.array([
+                [1, 1, 1],  # white
+                [1, 0, 0],    # red
+                [0, 1, 0],    # green
+                [0, 0, 1],    # blue
+                [1, 0, 1],   # purple
+                [1, 1, 0],    # yellow
+                [0, 1, 1],    # cyan
+                [0.5, 0.5, 0],  # olive
+                [1, 0.5, 0.6],   # pink
+                [0.68, 1, 0.18],  # yellow_green
+                [0.54, 0.90, 0.91]  # light blue
+            ])
+            selected = np.random.choice(rgb_colors.shape[0], clusters, replace=False)
+            rgb_colors = rgb_colors[selected]
+            print(rgb_colors)
+            stored_colors = []
+        elif isinstance(cmap, (np.ndarray, np.generic)):
+            row_indices = np.arange(cmap.shape[0])
+            selected = np.random.choice(row_indices, clusters, replace=False)
+            rgb_colors = cmap[selected]
+            stored_colors = []
+
+        def generate_and_store_colors():
+            np.random.shuffle(rgb_colors)
+            mixed_colors = np.dot(probs, rgb_colors)
+            mixed_colors = np.clip(mixed_colors, 0, 1)
+            stored_colors.append(mixed_colors)
+
+        generate_and_store_colors()
+        print(stored_colors)
+        empty_img[np.where(tissue_mask == 1)] = stored_colors[0]
+        plt.subplots_adjust(left=0.1, bottom=0.25)
+        img_display = plt.imshow(empty_img.reshape(self.ypixels, self.xpixels, 3))
+        clr_axes = plt.axes((0.1, 0.1, 0.8, 0.03), facecolor='lightgoldenrodyellow')
+        color_slider = Slider(clr_axes, 'colormap', 1, 20, valinit=1, valstep=1)
+
+        def color_update(val):
+            index = int(val)
+            while index >= len(stored_colors):
+                generate_and_store_colors()
+
+            empty_img[np.where(tissue_mask == 1)] = stored_colors[index]
+            img_display.set_data(empty_img.reshape(self.ypixels, self.xpixels, 3))
+            plt.draw()
+
+        color_slider.on_changed(color_update)
+        plt.title(f'GMM components: {gmm.n_components}')
+        plt.show()
