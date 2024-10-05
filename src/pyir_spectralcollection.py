@@ -1889,3 +1889,113 @@ class PyIR_SpectralCollection:
         color_slider.on_changed(color_update)
         plt.title(f'GMM components: {gmm.n_components}')
         plt.show()
+
+    import numpy as np
+
+    def fast_mnf_denoise(self, hyperspectraldata, SNR = 5):
+        """
+        Perform Fast Minimum Noise Fraction (MNF) denoising on hyperspectral data.
+        Code derived from supplementary information from Gupta et al:
+        https://doi.org/10.1371/journal.pone.0205219    
+    
+        This function reduces noise in hyperspectral images using the MNF 
+        transformation. The input data `hyperspectraldata` can be 2D or 3D. 
+        If the input is 3D (i.e., a hyperspectral image with spatial and 
+        spectral dimensions), it will be reshaped to 2D for processing and 
+        reshaped back to its original dimensions after denoising. If the input 
+        is already 2D, it will be processed directly.
+    
+        Steps:
+            1. Compute the difference matrix `dX` for noise estimation.
+            2. Perform eigenvalue decomposition on `dX^T * dX`.
+            3. Weight the input data by the inverse square root of the eigenvalues.
+            4. Perform eigenvalue decomposition on the weighted data.
+            5. Retain the top K components based on Rose's noise criterion.
+            6. Compute the transformation matrices `Phi_hat` and `Phi_tilde`.
+            7. Project the data onto MNF components and reconstruct the denoised data.
+    
+        Parameters
+        ----------
+        hyperspectraldata : numpy.ndarray
+            The input hyperspectral data. Can be either a 2D array (pixels × spectral bands)
+            or a 3D array (rows × columns × spectral bands).
+            
+        SNR : int
+            The signal to noise ratio value for detectability threshold outlined
+            in the Rose criterion for medical imaging signal detection theory.
+            A SNR value of 5 (default)  orivudes a 95% probability of object
+            detection by humans visually. This value can be changed under the 
+            assumption this function will be used in ML applications with less
+            subjectivity.
+    
+        Returns
+        -------
+        clean_data : numpy.ndarray
+            The denoised hyperspectral data. The output will have the same dimensions as the input:
+            - If the input was 3D, the output will be reshaped back to 3D.
+            - If the input was 2D, the output will remain 2D.
+    
+        Raises
+        ------
+        ValueError
+            If the input array `C` is neither 2D nor 3D.
+    
+        Example
+        -------
+        >>> hyperspectraldata = np.random.rand(100, 100, 50)  # A 3D hyperspectral image
+        >>> clean_data = fast_mnf_denoise(hyperspectraldata)
+        >>> clean_data.shape
+        (100, 100, 50)
+        """
+        
+        # Check if the input is 3D and reshape to 2D if needed
+        if hyperspectraldata.ndim == 3:
+            m, n, s = hyperspectraldata.shape
+            X = np.reshape(hyperspectraldata, (-1, s))  # Reshape to 2D
+        elif hyperspectraldata.ndim == 2:
+            X = hyperspectraldata
+            m, n = X.shape
+            s = n  # If already 2D, assume second dimension is the spectral dimension
+        else:
+            raise ValueError("Input C must be either 2D or 3D.")
+    
+        # Step 2: Create the dX matrix
+        dX = np.zeros((m, s))
+        for i in range(m - 1):
+            dX[i, :] = X[i, :] - X[i + 1, :]
+    
+        # Step 3: Perform eigenvalue decomposition of dX' * dX
+        S1, U1 = np.linalg.eigh(dX.T @ dX)
+        ix = np.argsort(S1)[::-1]  # Sort in descending order
+        U1 = U1[:, ix]
+        D1 = S1[ix]
+        diagS1 = 1.0 / np.sqrt(D1)
+    
+        # Step 4: Compute weighted X
+        wX = X @ U1 @ np.diag(diagS1)
+    
+        # Step 5: Perform eigenvalue decomposition of wX' * wX
+        S2, U2 = np.linalg.eigh(wX.T @ wX)
+        iy = np.argsort(S2)[::-1]  # Sort in descending order
+        U2 = U2[:, iy]
+        D2 = S2[iy]
+    
+        # Step 6: Retain top K components according to input SNR threshold
+        S2_diag = D2 - 1
+        K = np.sum(S2_diag > SNR)
+        U2 = U2[:, :K]
+    
+        # Step 7: Compute Phi_hat and Phi_tilde
+        Phi_hat = U1 @ np.diag(diagS1) @ U2
+        Phi_tilde = U1 @ np.diag(np.sqrt(D1)) @ U2
+    
+        # Step 8: Project data onto MNF components and reshape to original dimensions
+        mnfX = X @ Phi_hat
+        Xhat = mnfX @ Phi_tilde.T
+        
+        if hyperspectraldata.ndim == 3:
+            clean_data = np.reshape(Xhat, (m, n, s))  # Reshape back to 3D if input was 3D
+        else:
+            clean_data = Xhat  # Keep 2D if input was 2D
+    
+        return clean_data
