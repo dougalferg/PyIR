@@ -17,6 +17,7 @@ sys.path.append(full_path)
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.widgets as pltwidgets
 
 import scipy
 import scipy.sparse
@@ -27,6 +28,7 @@ import agilenttile
 from sklearn.cluster import KMeans
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
+from sklearn.mixture import GaussianMixture
 from scipy.interpolate import Akima1DInterpolator
 import h5py
 
@@ -1875,7 +1877,7 @@ class PyIR_SpectralCollection:
         plt.subplots_adjust(left=0.1, bottom=0.25)
         img_display = plt.imshow(empty_img.reshape(self.ypixels, self.xpixels, 3))
         clr_axes = plt.axes((0.1, 0.1, 0.8, 0.03), facecolor='lightgoldenrodyellow')
-        color_slider = Slider(clr_axes, 'colormap', 1, 20, valinit=1, valstep=1)
+        color_slider = pltwidgets.Slider(clr_axes, 'colormap', 1, 20, valinit=1, valstep=1)
 
         def color_update(val):
             index = int(val)
