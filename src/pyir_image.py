@@ -725,7 +725,7 @@ class PyIR_Image:
         return output_coords, fig
 
     
-    def core_mask_cleaner(binary_array, min_blob_size=500, expansion=0, pixel_proportion=0.95):
+    def core_mask_cleaner(self, binary_array, min_blob_size=500, expansion=0, pixel_proportion=0.95):
         """
         Cleans up the tissue mask of a core TMA treating each core as a blob.
         Identifies "blobs" in a binary array, expands the blobs by the given number of pixels,
