@@ -9,12 +9,6 @@
 
 import sys
 import os
-
-header = str(os.getcwd())
-sub_module = header + r'\Documents\GitHub'
-full_path = sub_module + r'\agilent-ir-formats\agilentirformats\agilentirformats'
-sys.path.append(full_path)
-
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.widgets as pltwidgets
