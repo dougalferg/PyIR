@@ -15,7 +15,7 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 from skimage import measure, segmentation
 from sklearn.metrics.pairwise import euclidean_distances
-from scipy.ndimage import label, find_objects
+from scipy.ndimage import label, find_objects, binary_dilation
 import cv2
 
 from pyir_spectralcollection import *
@@ -725,49 +725,81 @@ class PyIR_Image:
         return output_coords, fig
 
     
-    def core_mask_cleaner(self, binary_array, min_blob_size=500):
+    def core_mask_cleaner(binary_array, min_blob_size=500, expansion=0, pixel_proportion=0.95):
         """
         Cleans up the tissue mask of a core TMA treating each core as a blob.
-        Identifies "blobs" in a binary array and plots blobs larger than the minimum size.
-        Result image should be a cleaner binary mask.
+        Identifies "blobs" in a binary array, expands the blobs by the given number of pixels,
+        and combines the largest blobs until a given proportion of total pixels is reached.
     
         Parameters:
         - binary_array: A 2D numpy array with boolean values where True represents the blob.
         - min_blob_size: Minimum size of blobs to be considered for plotting.
-        - output_image_path: Path to save the output binary image.
+        - expansion: Number of pixels to expand the blobs (default is 0, no expansion).
+        - pixel_proportion: Proportion of total pixels to be captured by the largest blobs (default is 0.95).
     
         Returns:
-        - None
+        - output_array: Binary array representing the combination of largest blobs that reach the given pixel proportion.
         """
+        
+        original_input = binary_array.copy()
+    
+        # Expand the binary array by the given number of pixels
+        if expansion > 0:
+            binary_array = binary_dilation(binary_array, iterations=expansion)
+    
         # Label connected components
         labeled_array, num_features = label(binary_array)
     
         # Find slices corresponding to each blob
         slices = find_objects(labeled_array)
     
-        # Create an output array for visualization
-        output_array = np.zeros_like(binary_array)
+        # List to store blob sizes and corresponding slices
+        blob_data = []
     
+        # Calculate total number of 'True' pixels in the original binary array
+        total_pixels = np.sum(binary_array)
+    
+        # Gather information about blobs larger than the minimum size
         for i, s in enumerate(slices):
-            # Extract the blob
             blob = (labeled_array[s] == (i + 1))
             blob_size = np.sum(blob)
             
             # Check if the blob is larger than the minimum size
             if blob_size >= min_blob_size:
-                output_array[s] = blob
+                blob_data.append((blob_size, blob, s))
+        
+        # Sort blobs by size in descending order
+        blob_data.sort(key=lambda x: x[0], reverse=True)
     
+        # Create an empty array to accumulate the blobs
+        output_array = np.zeros_like(binary_array)
+    
+        # Track cumulative pixel count
+        cumulative_pixels = 0
+        target_pixels = pixel_proportion * total_pixels
+    
+        # Combine blobs from largest to smallest until target proportion is reached
+        for blob_size, blob, s in blob_data:
+            output_array[s] += blob
+            cumulative_pixels += blob_size
+            
+            # Stop if we have reached the required proportion of total pixels
+            if cumulative_pixels >= target_pixels:
+                break
+    
+        output_array = output_array*original_input
+        
         # Plot the original binary image and the filtered blobs
         fig, ax = plt.subplots(1, 2, figsize=(12, 6))
         
         # Plot original binary image
-        ax[0].imshow(binary_array, cmap='gray')
+        ax[0].imshow(original_input, cmap='gray')
         ax[0].set_title('Original Binary Image')
         ax[0].axis('off')
         
         # Plot filtered blobs
         ax[1].imshow(output_array, cmap='gray')
-        ax[1].set_title(f'Blobs Larger than {min_blob_size} Pixels')
+        ax[1].set_title(f'Blobs Covering {pixel_proportion * 100:.0f}% of Pixels')
         ax[1].axis('off')
         
         plt.show()
