@@ -1797,7 +1797,7 @@ class PyIR_SpectralCollection:
         plt.show()
 
     def gmm_clustering(self, tissue_data, tissue_mask, clusters=5, cmap='colorful', cov_type='full', init_params='k-means++'
-                       , max_iter=1000):
+                       , max_iter=1000, ypixels=0, xpixels=0):
         """
         GMM Clustering: support maximum 11 clusters by default. You can pass different colormaps by changing cmap (N*3 np.array
         , where N equals to number of clusters)
@@ -1813,7 +1813,7 @@ class PyIR_SpectralCollection:
         if clusters > 11:
             raise ValueError("The maximum number of clusters is 11. Define your own np.array with N (N>11) entries and pass it to 'cmap'")
         gmm = GaussianMixture(n_components=clusters, covariance_type=cov_type, init_params=init_params, max_iter=max_iter)
-        empty_img = np.zeros((self.data.shape[0], 3))
+        empty_img = np.zeros((tissue_mask.shape[0], 3))
         gmm.fit(tissue_data)
 
         probs = gmm.predict_proba(tissue_data)
@@ -1869,7 +1869,7 @@ class PyIR_SpectralCollection:
         print(stored_colors)
         empty_img[np.where(tissue_mask == 1)] = stored_colors[0]
         plt.subplots_adjust(left=0.1, bottom=0.25)
-        img_display = plt.imshow(empty_img.reshape(self.ypixels, self.xpixels, 3))
+        img_display = plt.imshow(empty_img.reshape(ypixels, xpixels, 3))
         clr_axes = plt.axes((0.1, 0.1, 0.8, 0.03), facecolor='lightgoldenrodyellow')
         color_slider = pltwidgets.Slider(clr_axes, 'colormap', 1, 20, valinit=1, valstep=1)
 
@@ -1879,7 +1879,7 @@ class PyIR_SpectralCollection:
                 generate_and_store_colors()
 
             empty_img[np.where(tissue_mask == 1)] = stored_colors[index]
-            img_display.set_data(empty_img.reshape(self.ypixels, self.xpixels, 3))
+            img_display.set_data(empty_img.reshape(ypixels, xpixels, 3))
             plt.draw()
 
         color_slider.on_changed(color_update)
@@ -1888,7 +1888,7 @@ class PyIR_SpectralCollection:
 
     import numpy as np
 
-    def fast_mnf_denoise(self, hyperspectraldata, SNR = 5):
+    def fast_mnf_denoise(self, hyperspectraldata, SNR = 5, bands = 0):
         """
         Perform Fast Minimum Noise Fraction (MNF) denoising on hyperspectral data.
         Code derived from supplementary information from Gupta et al:
@@ -1907,6 +1907,7 @@ class PyIR_SpectralCollection:
             3. Weight the input data by the inverse square root of the eigenvalues.
             4. Perform eigenvalue decomposition on the weighted data.
             5. Retain the top K components based on Rose's noise criterion.
+            If bands =/= 0, the number of components is set to bands.
             6. Compute the transformation matrices `Phi_hat` and `Phi_tilde`.
             7. Project the data onto MNF components and reconstruct the denoised data.
     
@@ -1978,7 +1979,10 @@ class PyIR_SpectralCollection:
     
         # Step 6: Retain top K components according to input SNR threshold
         S2_diag = D2 - 1
-        K = np.sum(S2_diag > SNR)
+        if bands !=0:
+            K = bands
+        else:
+            K = np.sum(S2_diag > SNR) 
         U2 = U2[:, :K]
     
         # Step 7: Compute Phi_hat and Phi_tilde
