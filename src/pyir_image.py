@@ -725,7 +725,7 @@ class PyIR_Image:
         return output_coords, fig
 
     
-    def core_mask_cleaner(self, binary_array, min_blob_size=500, expansion=0, pixel_proportion=0.95):
+    def core_mask_cleaner(self, binary_array, min_blob_size=500, expansion=0, pixel_proportion=0.95, plot=False):
         """
         Cleans up the tissue mask of a core TMA treating each core as a blob.
         Identifies "blobs" in a binary array, expands the blobs by the given number of pixels,
@@ -736,6 +736,7 @@ class PyIR_Image:
         - min_blob_size: Minimum size of blobs to be considered for plotting.
         - expansion: Number of pixels to expand the blobs (default is 0, no expansion).
         - pixel_proportion: Proportion of total pixels to be captured by the largest blobs (default is 0.95).
+        - plot: Whether to plot the input mask array and resultant largest blob combination output (default is False).
     
         Returns:
         - output_array: Binary array representing the combination of largest blobs that reach the given pixel proportion.
@@ -789,19 +790,20 @@ class PyIR_Image:
     
         output_array = output_array*original_input
         
-        # Plot the original binary image and the filtered blobs
-        fig, ax = plt.subplots(1, 2, figsize=(12, 6))
-        
-        # Plot original binary image
-        ax[0].imshow(original_input, cmap='gray')
-        ax[0].set_title('Original Binary Image')
-        ax[0].axis('off')
-        
-        # Plot filtered blobs
-        ax[1].imshow(output_array, cmap='gray')
-        ax[1].set_title(f'Blobs Covering {pixel_proportion * 100:.0f}% of Pixels')
-        ax[1].axis('off')
-        
-        plt.show()
+        if plot != False:
+            # Plot the original binary image and the filtered blobs
+            fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+            
+            # Plot original binary image
+            ax[0].imshow(original_input, cmap='gray')
+            ax[0].set_title('Original Binary Image')
+            ax[0].axis('off')
+            
+            # Plot filtered blobs
+            ax[1].imshow(output_array, cmap='gray')
+            ax[1].set_title(f'Blobs Covering {pixel_proportion * 100:.0f}% of Pixels')
+            ax[1].axis('off')
+            
+            plt.show()
     
         return output_array
