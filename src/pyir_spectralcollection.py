@@ -1683,8 +1683,9 @@ class PyIR_SpectralCollection:
             signal = signals[i]
             for _ in range(iterations):
                 # Fit a polynomial to the signal
-                p = np.polynomial.polynomial.Polynomial.fit(x, signal, degree)
-                baseline = p(x)
+                #p = np.polynomial.polynomial.Polynomial.fit(x, signal, degree)
+                p = np.polyfit(x, signal, degree)
+                baseline = np.polyval(p, x)
                 
                 # Calculate the residuals (signal - baseline)
                 residuals = signal - baseline

@@ -668,7 +668,7 @@ class PyIR_Image:
         return rebuild_knn
     
     
-    def identify_cores_and_plot(self, mask_image, min_size, margin=20, expansion=0):
+    def identify_cores_and_plot(self, mask_image, min_size, margin=20, expansion=0, font_size=8):
         # Step 1: Ensure the image is binary
         if mask_image.dtype == bool:
             binary_mask = mask_image.astype(np.uint8) * 255
@@ -712,7 +712,7 @@ class PyIR_Image:
                     # Draw the rectangle and label it
                     rect = plt.Rectangle((x_margin, y_margin), w_margin, h_margin, edgecolor='r', facecolor='none')
                     ax.add_patch(rect)
-                    ax.text(x_margin, y_margin - 10, f'Grid {grid_counter}', color='red', fontsize=8)
+                    ax.text(x_margin, y_margin - 10, f'Grid {grid_counter}', color='lime', fontsize=font_size)
                     
                     grid_counter = grid_counter+1
                     
