@@ -26,6 +26,8 @@ from sklearn.mixture import GaussianMixture
 from scipy.interpolate import Akima1DInterpolator
 import h5py
 
+from skimage.restoration import denoise_nl_means, estimate_sigma
+
 import pyir_image 
 import pyir_mask 
 import pyir_pca 
@@ -2000,3 +2002,68 @@ class PyIR_SpectralCollection:
             clean_data = Xhat  # Keep 2D if input was 2D
     
         return clean_data
+
+    def nlm_denoise(self, hyperspectraldata, ydims=0, xdims=0, patch_size=4, patch_distance=3, h_factor=2.0, fast_mode=True):
+        """
+        Perform Non-Local Means (NLM) denoising on hyperspectral data.
+        This method is applied to a 3D hyperspectral image as a means to treat
+        spatially correleated noise (like coherence effects). It calculates the 
+        estimation of noise parameters automatically. Default parameters were
+        chosen as a function of speed. Estimated run time for a  350x350x425
+        dataset is 10 seconds.
+    
+        Parameters
+        ----------
+        hyperspectraldata : numpy.ndarray
+            The input hyperspectral data (2D: pixels × spectral bands or 3D: rows × cols × spectral bands).
+        ydims : int, optional
+            Number of pixels in y-direction, required if data input is 2D (default: 0).
+        xdims : int, optional
+            Number of pixels in x-direction, required if data input is 2D (default: 0).
+        patch_size : int, optional
+            Size of the patches used for denoising (default: 4).
+        patch_distance : int, optional
+            Max distance to search for similar patches (default: 3).
+        h_factor : float, optional
+            Filtering parameter: larger values remove more noise (default: 2.0).
+        fast_mode : bool, optional
+            If True, enables fast approximation for large images (default: True).
+    
+        Returns
+        -------
+        clean_data : numpy.ndarray
+            The denoised hyperspectral data, with the same shape as the input.
+        """
+        # Check if input is 3D and reshape to 2D if necessary
+        if hyperspectraldata.ndim == 3:
+            ydims, xdims, wav_dims = hyperspectraldata.shape
+            sig_est_check = 0
+    
+        elif hyperspectraldata.ndim == 2:
+            sigma_est = estimate_sigma(hyperspectraldata, channel_axis=1)
+            sig_est_check = 1
+            wav_dims = hyperspectraldata.shape[1]
+            hyperspectraldata = hyperspectraldata.reshape(ydims, xdims, wav_dims)
+            
+            if ydims==0 or xdims ==0:
+               raise ValueError("Data input appears 2D and requires ydims and xdims arguments.") 
+    
+        else:
+            raise ValueError("Input must be either 2D (pixels × bands) or 3D (rows × cols × bands).")
+        
+        # Estimate noise standard deviation per spectral band
+        if sig_est_check == 0:
+            sigma_est = estimate_sigma(hyperspectraldata, channel_axis=1)
+            hyperspectraldata = hyperspectraldata.reshape(ydims, xdims, wav_dims)
+     
+        
+        # Apply Non-Local Means denoising on each spectral band independently
+        clean_data = np.zeros_like(hyperspectraldata)
+        for i in range(hyperspectraldata.shape[2]):
+            clean_data[:,:, i] = denoise_nl_means(hyperspectraldata[:,:, i], h=h_factor * sigma_est[i], patch_size=patch_size,
+                                             patch_distance=patch_distance, fast_mode=fast_mode)
+        
+        return clean_data.reshape(ydims*xdims, wav_dims)
+    
+    
+    
