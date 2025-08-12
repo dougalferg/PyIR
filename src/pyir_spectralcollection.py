@@ -1744,8 +1744,16 @@ class PyIR_SpectralCollection:
     
     def clickon(self, image_2d, signal_3d, wavenumber, ypixel=None, xpixel=None):
         """
-        Display an interactive plot where clicking on the image shows a line plot
-        of the 3D signal array along the third axis at the clicked position.
+        Display an interactive plot with enhanced click functionality and coloured pins.
+    
+        A coloured pin is placed on the image for each plotted spectrum,
+        matching the spectrum's colour. The pins are managed with the same
+        click actions as the spectra.
+    
+        - Left Click: Adds a  spectrum and a corresponding pin.
+        - Right Click: Removes the most recently added spectrum and pin.
+        - Shift + Left Click: Clears all and shows only the selected spectrum/pin.
+        - Shift + Right Click: Clears all spectra and pins.
         
         Parameters:
         - image_2d: 2D numpy array to be displayed as an image. Can be 1D if dimensions are provided.
@@ -1756,6 +1764,7 @@ class PyIR_SpectralCollection:
         """
         
         # Check if image_2d needs reshaping
+        #  Data Validation and Reshaping (Unchanged) 
         if image_2d.ndim == 1 and ypixel is not None and xpixel is not None:
             image_2d = image_2d.reshape(ypixel, xpixel)
         
@@ -1769,35 +1778,89 @@ class PyIR_SpectralCollection:
         
         if wavenumber.ndim != 1 or wavenumber.shape[0] != signal_3d.shape[2]:
             raise ValueError("Wavenumber array must be 1D and match the third dimension of signal_3d.")
+    
+        #  Plot Setup 
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 6))
+        fig.suptitle('Image with Pins (Left) and Spectra (Right)')
         
-        # Create a figure with two subplots
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+        ax1.imshow(image_2d, cmap='gray', interpolation='nearest')
+        ax1.set_title('Click on the image')
         
-        # Plot the 2D image
-        ax1.imshow(image_2d, cmap='gray')
-        
-        # Plot an initial line plot (empty)
-        line, = ax2.plot([], [])
         ax2.set_xlabel('Wavenumber (cm⁻¹)')
         ax2.set_ylabel('Absorbance (arb.)')
-        
-        # Define the click event function
+        ax2.set_title('Spectra')
+    
+        #  : Create two lists to manage both lines and pins 
+        plotted_lines = []
+        plotted_pins = []
+    
+        #  Click Event Function 
         def onclick(event):
-            # Get the x, y coordinates of the click
-            x, y = int(event.xdata), int(event.ydata)
+            if event.inaxes != ax1:
+                return
+                
+            x, y = int(round(event.xdata)), int(round(event.ydata))
             
-            if x >= 0 and y >= 0 and x < image_2d.shape[1] and y < image_2d.shape[0]:
-                # Update the line plot with the signal at the clicked location
-                signal = signal_3d[y, x, :]
-                line.set_data(wavenumber, signal)
+            if 0 <= y < image_2d.shape[0] and 0 <= x < image_2d.shape[1]:
+                
+                #  SHIFT + RIGHT CLICK: Remove all spectra and pins 
+                if event.key == 'shift' and event.button == 3:
+                    while plotted_lines:
+                        plotted_lines.pop().remove()
+                        plotted_pins.pop().remove() # Also remove the pin
+                    ax2.set_title('Spectra')
+    
+                #  SHIFT + LEFT CLICK: Plot this spectrum/pin only 
+                elif event.key == 'shift' and event.button == 1:
+                    while plotted_lines:
+                        plotted_lines.pop().remove()
+                        plotted_pins.pop().remove() # Also remove the pin
+                    
+                    signal = signal_3d[y, x, :]
+                    line, = ax2.plot(wavenumber, signal, label=f'({x},{y})')
+                    # : Get the line colour and plot a matching pin
+                    pin_color = line.get_color()
+                    pin = ax1.scatter(x, y, c=pin_color, marker='o', edgecolor='white', s=50, zorder=5)
+                    
+                    plotted_lines.append(line)
+                    plotted_pins.append(pin) # Add pin to its management list
+                    ax2.set_title(f'Spectrum at ({x},{y})')
+    
+                #  LEFT CLICK: Add a  spectrum and pin 
+                elif event.button == 1:
+                    signal = signal_3d[y, x, :]
+                    line, = ax2.plot(wavenumber, signal, label=f'({x},{y})')
+                    # : Get the line colour and plot a matching pin
+                    pin_color = line.get_color()
+                    pin = ax1.scatter(x, y, c=pin_color, marker='o', edgecolor='white', s=50, zorder=5)
+                    
+                    plotted_lines.append(line)
+                    plotted_pins.append(pin) # Add pin to its management list
+                    ax2.set_title(f'{len(plotted_lines)} spectra plotted')
+    
+                #  RIGHT CLICK: Remove the previous spectrum and pin 
+                elif event.button == 3:
+                    if plotted_lines:
+                        # Remove the last line AND the last pin
+                        plotted_lines.pop().remove()
+                        plotted_pins.pop().remove()
+                        
+                        if not plotted_lines:
+                            ax2.set_title('Spectra')
+                        else:
+                            ax2.set_title(f'{len(plotted_lines)} spectra plotted')
+    
+                # Update plot limits, legend, and redraw the canvas
                 ax2.relim()
                 ax2.autoscale_view()
+                ax2.legend()
                 fig.canvas.draw()
-        
-        # Connect the click event to the onclick function
+    
+        # Connect the event handler and show the plot
         fig.canvas.mpl_connect('button_press_event', onclick)
-        
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
         plt.show()
+
 
     def gmm_clustering(self, tissue_data, tissue_mask, clusters=5, cmap='colorful', cov_type='full', init_params='k-means++'
                        , max_iter=1000, ypixels=0, xpixels=0):
@@ -1915,7 +1978,7 @@ class PyIR_SpectralCollection:
             7. Project the data onto MNF components and reconstruct the denoised data.
     
         Parameters
-        ----------
+        -
         hyperspectraldata : numpy.ndarray
             The input hyperspectral data. Can be either a 2D array (pixels × spectral bands)
             or a 3D array (rows × columns × spectral bands).
@@ -1929,19 +1992,19 @@ class PyIR_SpectralCollection:
             subjectivity.
     
         Returns
-        -------
+        -
         clean_data : numpy.ndarray
             The denoised hyperspectral data. The output will have the same dimensions as the input:
             - If the input was 3D, the output will be reshaped back to 3D.
             - If the input was 2D, the output will remain 2D.
     
         Raises
-        ------
+        
         ValueError
             If the input array `C` is neither 2D nor 3D.
     
         Example
-        -------
+        -
         >>> hyperspectraldata = np.random.rand(100, 100, 50)  # A 3D hyperspectral image
         >>> clean_data = fast_mnf_denoise(hyperspectraldata)
         >>> clean_data.shape
@@ -2013,7 +2076,7 @@ class PyIR_SpectralCollection:
         dataset is 10 seconds.
     
         Parameters
-        ----------
+        -
         hyperspectraldata : numpy.ndarray
             The input hyperspectral data (2D: pixels × spectral bands or 3D: rows × cols × spectral bands).
         ydims : int, optional
@@ -2030,7 +2093,7 @@ class PyIR_SpectralCollection:
             If True, enables fast approximation for large images (default: True).
     
         Returns
-        -------
+        -
         clean_data : numpy.ndarray
             The denoised hyperspectral data, with the same shape as the input.
         """
