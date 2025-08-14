@@ -1789,6 +1789,7 @@ class PyIR_SpectralCollection:
         ax2.set_xlabel('Wavenumber (cm⁻¹)')
         ax2.set_ylabel('Absorbance (arb.)')
         ax2.set_title('Spectra')
+        ax2.invert_xaxis()
     
         #  : Create two lists to manage both lines and pins 
         plotted_lines = []
@@ -1853,7 +1854,6 @@ class PyIR_SpectralCollection:
                 # Update plot limits, legend, and redraw the canvas
                 ax2.relim()
                 ax2.autoscale_view()
-                ax2.legend()
                 fig.canvas.draw()
     
         # Connect the event handler and show the plot
