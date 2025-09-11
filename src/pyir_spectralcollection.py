@@ -1954,7 +1954,7 @@ class PyIR_SpectralCollection:
         plt.show()
 
     
-    def imnf_denoise(hyperspectraldata, wavenumbers=None, bands=30,
+    def imnf_denoise(self, hyperspectraldata, wavenumbers=None, bands=30,
                      noise_method='silent_region', silent_region_range=(1750, 1800),
                      silent_region_slice=None, silent_region_scale='non_uniform'):
         """
@@ -2106,7 +2106,7 @@ class PyIR_SpectralCollection:
         return D_reshaped, P_hat_K, P_tilde_K
     
     
-    def patchwise_imnf_denoise(
+    def patchwise_imnf_denoise(self, 
         hyperspectraldata,
         wavenumbers,
         patch_size=(64, 64),
