@@ -901,7 +901,7 @@ class PyIR_SpectralCollection:
         
         """
         
-        return sci_int.simps(data, **kwargs)
+        return sci_int.simpson(data, **kwargs)
     
     def area_between(self, upper, lower, data=False, wavenums=False, **kwargs):
         """Extracts the area under each spectral absorbance plot between two
@@ -2167,7 +2167,7 @@ class PyIR_SpectralCollection:
                 current_patch = hyperspectraldata[y_start:y_end, x_start:x_end, :]
     
                 # Denoise the patch using the main iMNF function
-                denoised_patch, _, _ = imnf_denoise(
+                denoised_patch, _, _ = self.imnf_denoise(
                     current_patch, wavenumbers=wavenumbers, **imnf_kwargs
                 )
     

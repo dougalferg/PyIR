@@ -4,7 +4,6 @@
 #os
 #numpy
 #matplotlib
-#agilentirformats
 #scipy
 #sklearn
 #skimage
