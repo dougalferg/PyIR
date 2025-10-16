@@ -1,25 +1,30 @@
+# pyproject.toml
+
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "PyIR"
-version = "0.1.0" # Make sure this is a valid version
+name = "pyir-toolkit"
+version = "0.1.1"
 authors = [
-  { name="Dougal Ferguson", email="dougal.ferguson@manchester.ac.uk" },
+    { name = "Dougal Ferguson", email = "dougal.ferguson@manchester.ac.uk" },
 ]
-description = "An infrared spectroscopy toolkit for the loading, handling and manipulation of IR spectral datasets in Python. Package includes wrappers for various ML packages."
+description = "My PyIR toolkit for the handling of hyperspectral data"
 readme = "README.rst"
-license = { text = "GNU Lesser General Public License v3.0 or later" }
+requires-python = ">=3.8"
 classifiers = [
-    "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License", # Choose a license
+    "Operating System :: OS Independent",
 ]
-# Add your real dependencies here, for example:
-# dependencies = [
-#   "numpy",
-#   "pandas",
-# ]
-
-[tool.setuptools.packages.find]
-where = ["src"]
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "scipy",
+    "scikit-learn",
+    "h5py",
+    "scikit-image",
+    "Pillow",
+    "opencv-python",
+]
