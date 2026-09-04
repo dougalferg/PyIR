@@ -15,8 +15,10 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 from skimage import measure, segmentation
 from sklearn.metrics.pairwise import euclidean_distances
-from scipy.ndimage import label, find_objects, binary_dilation
+from scipy.ndimage import label, find_objects, binary_dilation, binary_fill_holes, binary_erosion
 import cv2
+from matplotlib.widgets import Button
+
 
 from pyir_spectralcollection import *
 from pyir_mask import * 
@@ -723,9 +725,124 @@ class PyIR_Image:
         plt.show()
         
         return output_coords, fig
+    
+    
+    def identify_cores_and_plot_click(self, mask_image, min_size=0, margin=20, expansion=0, font_size=8):
+        # Step 1: Ensure the image is binary
+        if mask_image.dtype == bool:
+            binary_mask = mask_image.astype(np.uint8) * 255
+        else:
+            _, binary_mask = cv2.threshold(mask_image, 127, 255, cv2.THRESH_BINARY)
+        
+        expanded_masks = segmentation.expand_labels(binary_mask, distance=expansion)
+        
+        # Step 2: Identify individual cores (runs once in background for quick selection)
+        num_labels, labels_im = cv2.connectedComponents(expanded_masks)
+        
+        # Step 3: Initialize plot and leave room for the "Done" button
+        fig, ax = plt.subplots()
+        plt.subplots_adjust(bottom=0.15) 
+        ax.imshow(mask_image, cmap='gray')
+        ax.set_title("Click: Select Core | Shift+Click: Merge into Box | Right Click: Undo")
+        ax.axis('off')
+        
+        # State tracking for interactions
+        state = {
+            'coords': [],
+            'patches': []
+        }
+        
+        def get_bbox(label_idx):
+            """Helper to get bounding box of a specific connected component."""
+            core_mask = np.where(labels_im == label_idx, 255, 0).astype(np.uint8)
+            contours, _ = cv2.findContours(core_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if contours:
+                x, y, w, h = cv2.boundingRect(contours[0])
+                return x, y, x + w, y + h
+            return None
+    
+        def onclick(event):
+            # Ignore clicks outside the main image or on the "Done" button
+            if not event.inaxes or event.inaxes == ax_button: 
+                return
+    
+            # Right Click (Button 3): Undo last selection
+            if event.button == 3: 
+                if state['coords']:
+                    state['coords'].pop()
+                    rect, text = state['patches'].pop()
+                    rect.remove()
+                    text.remove()
+                    fig.canvas.draw()
+                return
+                
+            x_click, y_click = int(event.xdata), int(event.ydata)
+            label_idx = labels_im[y_click, x_click]
+            
+            # Ignore background clicks
+            if label_idx == 0: 
+                return
+                
+            bbox = get_bbox(label_idx)
+            if not bbox: return
+            x1, y1, x2, y2 = bbox
+            
+            # Apply margins and constrain to image bounds
+            x1 = max(x1 - margin, 0)
+            y1 = max(y1 - margin, 0)
+            x2 = min(x2 + margin, mask_image.shape[1])
+            y2 = min(y2 + margin, mask_image.shape[0])
+            
+            # Shift+Click (Merge with previous grid)
+            if event.button == 1 and event.key == 'shift':
+                if not state['coords']: return # Nothing to merge with yet
+                
+                # Pop previous coordinates to expand them
+                prev_x1, prev_y1, prev_x2, prev_y2 = state['coords'].pop()
+                x1 = min(x1, prev_x1)
+                y1 = min(y1, prev_y1)
+                x2 = max(x2, prev_x2)
+                y2 = max(y2, prev_y2)
+                
+                # Remove previous visual patches from the plot
+                rect, text = state['patches'].pop()
+                rect.remove()
+                text.remove()
+            
+            # Save new or merged coordinates
+            state['coords'].append([x1, y1, x2, y2])
+            
+            # Draw live bounding box
+            w = x2 - x1
+            h = y2 - y1
+            rect = plt.Rectangle((x1, y1), w, h, edgecolor='r', facecolor='none')
+            ax.add_patch(rect)
+            
+            grid_num = len(state['coords']) - 1 # Zero-indexed matching original code
+            text = ax.text(x1, y1 - 10, f'Grid {grid_num}', color='lime', fontsize=font_size)
+            
+            state['patches'].append((rect, text))
+            fig.canvas.draw()
+            
+        # Bind the click event
+        cid = fig.canvas.mpl_connect('button_press_event', onclick)
+        
+        # Step 4: Create the "Done" Button
+        ax_button = plt.axes([0.8, 0.025, 0.15, 0.075])
+        btn = Button(ax_button, 'Done')
+        
+        def finish(event):
+            plt.close(fig) # Closes plot, allowing code execution to continue
+            
+        btn.on_clicked(finish)
+        
+        # Block execution until the figure is closed
+        plt.show(block=True)
+        
+        return state['coords'], fig   
 
     
-    def core_mask_cleaner(self, binary_array, min_blob_size=500, expansion=0, pixel_proportion=0.95, plot=False):
+    def core_mask_cleaner(self, binary_array, min_blob_size=500, expansion=0, edge_erosion=5, pixel_proportion=0.95, plot=False):
         """
         Cleans up the tissue mask of a core TMA treating each core as a blob.
         Identifies "blobs" in a binary array, expands the blobs by the given number of pixels,
@@ -735,6 +852,7 @@ class PyIR_Image:
         - binary_array: A 2D numpy array with boolean values where True represents the blob.
         - min_blob_size: Minimum size of blobs to be considered for plotting.
         - expansion: Number of pixels to expand the blobs (default is 0, no expansion).
+        - edge_erosion: Number of pixels to erode from the outer boundary to remove edge artifacts.
         - pixel_proportion: Proportion of total pixels to be captured by the largest blobs (default is 0.95).
         - plot: Whether to plot the input mask array and resultant largest blob combination output (default is False).
     
@@ -787,6 +905,18 @@ class PyIR_Image:
             # Stop if we have reached the required proportion of total pixels
             if cumulative_pixels >= target_pixels:
                 break
+    
+        # Remove edge pixels if stated
+        if edge_erosion > 0:
+            # Fill holes to create a solid mass (assumes a core input or tissue with gaps)
+            solid_footprint = binary_fill_holes(output_array)
+            
+            # Erode the outer boundary of this mass
+            eroded_footprint = binary_erosion(solid_footprint, iterations=edge_erosion)
+            
+            # Mask the output array using the eroded mass to strip outer edges 
+            # while leaving internal structures and holes as they were
+            output_array = output_array & eroded_footprint
     
         output_array = output_array*original_input
         
